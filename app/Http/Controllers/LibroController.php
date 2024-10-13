@@ -15,22 +15,27 @@ class LibroController extends Controller
     // Mostrar una lista de libros
     public function index()
     {
-        $seeder = new DatabaseSeeder();
+        /*  $seeder = new DatabaseSeeder();
         // Ejecutar el seeder 'DatabaseSeeder'
-       $seeder->run('db:seed', [
+      $seeder->run('db:seed', [
            '--class' => 'Database\\Seeders\\DatabaseSeeder',
-       ]);
+       ]);*/
 
-       $response = Http::withToken('oat_OA.dXZtc2xldDhqakd0MnJyQm1TTThJOFZwbDhJMWpWY0g2b3ZBUnBFSjM5Mjg2MDk2OTg')
-       ->timeout(80)
-       // Node -> 2 
-       ->get('http://localhost:3333/multiplicacion/3');
-       $datas = $response->json();
+        $response = Http::withToken('oat_OA.dXZtc2xldDhqakd0MnJyQm1TTThJOFZwbDhJMWpWY0g2b3ZBUnBFSjM5Mjg2MDk2OTg')
+            ->timeout(80)
+            // Node -> 2 
+            ->get('http://localhost:3333/multiplicacion/3');
+        $datas = $response->json();
 
-        $libros = Libro::all();
+        $libros = Libro::with([
+            'autor', // Información del autor
+            'publicaciones.editorial', // Información de las publicaciones y editoriales
+            'resenas.lector', // Información de las reseñas y los lectores que las escribieron
+            'inventarios.libreria' // Información de los inventarios y las librerías
+        ])->get();
         return response()->json([
             'success' => true,
-            'message' => 'Lista de libros',
+            'message' => 'Lista de libros', 
             'data' => $libros,
             'data2' => $datas
 
