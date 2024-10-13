@@ -27,13 +27,13 @@ class DatabaseSeeder extends Seeder
     {
         // \App\Models\User::factory(10)->create();
         Autor::factory(1)->create();
-        Editorial::factory(5)->create();
+        Editorial::factory(2)->create();
         Libro::factory(2)->create();
         Lector::factory(2)->create();
         Resena::factory(2)->create();
         Prestamo::factory(2)->create();
         Publicacion::factory(1)->create();
-        EventoLiterario::factory(5)->create();
+        EventoLiterario::factory(2)->create();
         Inventario::factory(2)->create();
         ParticipacionEvento::factory(2)->create();
 

@@ -8,6 +8,7 @@ use Database\Seeders\DatabaseSeeder;
 use Dflydev\DotAccessData\Data;
 use Illuminate\Http\Request;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Http;
 
 class LibroController extends Controller
 {
@@ -20,11 +21,19 @@ class LibroController extends Controller
            '--class' => 'Database\\Seeders\\DatabaseSeeder',
        ]);
 
+       $response = Http::withToken('oat_OA.dXZtc2xldDhqakd0MnJyQm1TTThJOFZwbDhJMWpWY0g2b3ZBUnBFSjM5Mjg2MDk2OTg')
+       ->timeout(80)
+       // Node -> 2 
+       ->get('http://localhost:3333/multiplicacion/3');
+       $datas = $response->json();
+
         $libros = Libro::all();
         return response()->json([
             'success' => true,
             'message' => 'Lista de libros',
-            'data' => $libros
+            'data' => $libros,
+            'data2' => $datas
+
         ]);
     }
 
