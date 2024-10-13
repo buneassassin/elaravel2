@@ -10,6 +10,7 @@ class Autor extends Model
     use HasFactory;
 
     protected $fillable = ['nombre', 'nacionalidad'];
+    
 
     public function libros()
     {

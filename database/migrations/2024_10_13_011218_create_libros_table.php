@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('titulo');
             $table->string('genero')->nullable();
-            $table->foreignId('autor_id')->constrained('autores');
+            $table->foreignId('autor_id')->constrained('autors');
             $table->timestamps();
         });
     }

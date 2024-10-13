@@ -13,10 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('participaciones_eventos', function (Blueprint $table) {
+        Schema::create('participacion_eventos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('evento_id')->constrained('eventos_literarios');
-            $table->foreignId('autor_id')->constrained('autores');
+            $table->foreignId('evento_id')->constrained('evento_literarios');
+            $table->foreignId('autor_id')->constrained('autors');
             $table->timestamps();
         });
     }

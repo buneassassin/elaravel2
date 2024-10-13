@@ -13,10 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('publicaciones', function (Blueprint $table) {
+        Schema::create('publicacions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('libro_id')->constrained('libros');
-            $table->foreignId('editorial_id')->constrained('editoriales');
+            $table->foreignId('editorial_id')->constrained('editorials');
             $table->date('fecha_publicacion')->nullable();
             $table->timestamps();
         });
