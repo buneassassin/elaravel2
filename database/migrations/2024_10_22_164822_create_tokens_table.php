@@ -13,12 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('inventarios', function (Blueprint $table) {
+        Schema::create('tokens', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('libreria_id')->constrained('librerias');
-            $table->foreignId('libro_id')->constrained('libros');
-            
-            $table->integer('cantidad')->nullable();
+            $table->text('token3');
+            $table->text('token4');
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('inventarios');
+        Schema::dropIfExists('tokens');
     }
 };

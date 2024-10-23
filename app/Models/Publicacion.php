@@ -19,4 +19,14 @@ class Publicacion extends Model
     {
         return $this->belongsTo(Editorial::class);
     }
+    // En el modelo Libro
+    public function resenas()
+    {
+        return $this->hasMany(Resena::class);
+    }
+
+    public function publicaciones()
+    {
+        return $this->hasMany(Publicacion::class);
+    }
 }
