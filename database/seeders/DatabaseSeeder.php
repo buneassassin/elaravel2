@@ -14,6 +14,7 @@ use App\Models\Resena;
 use App\Models\Lector;
 use App\Models\Prestamo;
 use App\Models\Libro;
+use App\Models\Role;
 
 
 class DatabaseSeeder extends Seeder
@@ -26,16 +27,16 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         // \App\Models\User::factory(10)->create();
-      /*  Autor::factory(1)->create();
-       Editorial::factory(1)->create();*/
-        Libro::factory(1)->create();
-      /*  Lector::factory(1)->create();
-        Resena::factory(1)->create();
-        Prestamo::factory(1)->create();
-        Publicacion::factory(1)->create();
-        EventoLiterario::factory(1)->create();
-        Inventario::factory(1)->create();
-        ParticipacionEvento::factory(1)->create();*/
+        Autor::factory(5)->create();
+        Editorial::factory(5)->create();
+        Libro::factory(5)->create();
+        Lector::factory(5)->create();
+        Resena::factory(5)->create();
+        Prestamo::factory(5)->create();
+        Publicacion::factory(5)->create();
+        EventoLiterario::factory(5)->create();
+        Inventario::factory(5)->create();
+        ParticipacionEvento::factory(5)->create();
 
 
     }

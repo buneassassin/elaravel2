@@ -3,134 +3,122 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
+use App\Models\User;
+use App\Mail\AccountActivationMail;
+use App\Mail\AdminNotificationMail;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
     public function register_sanctum(Request $request)
     {
-      
-        $register = Http::withOptions([
-            'verify' => false,
-        ])->post('http://192.168.116.70:5400/register', [                         
-            'email' => $request->input('email'),
-            'password' => $request->input('password'),
-        ]);
-        $tobias=$register->json();
-        // Validar los datos de entrada
-        $request->validate([                                                                        
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'device_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255',
+            'password' => 'required|string|min:6',
         ]);
-         
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Los datos proporcionados son inválidos.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        //verificar si el correo ya esta registrado
 
-        // Crear un nuevo usuario
+        $user = User::where('email', $request->email)->first();
+        if ($user) {
+            return response()->json(['message' => 'El usuario ya existe.'], 400);
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password), // Encriptar la contraseña
+            'password' => Hash::make($request->password),
+            'role_id' => 1,
+            'is_active' => false,
+            'profile_picture' => null,
         ]);
 
-        // Crear un token de acceso personal
-        $token = $user->createToken($request->device_name)->plainTextToken;
+        $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(1), ['user' => $user->id]);
+        Mail::to($request->email)->send(new AccountActivationMail($activationLink));
 
-
-        // Devolver la respuesta
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'Tobias'=>$tobias
-        ], 201);
+        return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu correo para activar la cuenta.'], 201);
     }
 
     public function login_sanctum(Request $request)
     {
-        $register = Http::withOptions([
-            'verify' => false,
-        ])->post('http://192.168.116.70:5400/login', [
-            'email' => $request->input('email'),
-            'password' => $request->input('password'),
-        ]);
-        //devolvemos el puro token
-        $tokenss = $register->json()['token'];
-        // Validar los datos de entrada
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
-            'device_name' => 'required|string|max:255',
         ]);
 
-        // Autenticar al usuario
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
+        }
+
         $user = User::where('email', $request->email)->first();
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['error' => 'Credenciales inválidas'], 401);
-        }        
+        }
 
-        // Crear un token de acceso personal        
-        $token = $user->createToken($request->device_name)->plainTextToken;
-      
-        // Devolver la respuesta
-        return response()->json([
-            'token_3' => $token,
-            'token_4'=> $tokenss
-       
-        ], 201);
-    } 
+        if (!$user->is_active) {
+            return response()->json(['error' => 'Cuenta no activada. Por favor, revisa tu correo para activarla.'], 403);
+        }
 
-    public function me(Request $request){
-        $user = $request->user();
-        return response()->json($user); 
-    }  
+        $token = $user->createToken("Mi_dispositivo")->plainTextToken;
 
-    public function getTokensByEmail(Request $request)
+        return response()->json(['user' => $user, 'token' => $token], 201);
+    }
+
+    public function activateAccount(Request $request)
     {
-        // Validar que el campo 'email' esté presente en el cuerpo
-        $request->validate([
-            'email' => 'required|email',
+        $user = User::find($request->user);
+
+        if ($user->is_active) {
+            return response()->json(['message' => 'La cuenta ya está activada.'], 400);
+        }
+
+        $admin = User::where('role_id', 3)->first();
+
+        if ($admin) {
+            Mail::to($admin->email)->send(new AdminNotificationMail($user));
+        }
+
+        $user->is_active = true;
+        $user->save();
+
+        return response()->json(['message' => 'La cuenta ha sido activada.'], 200);
+    }
+
+    public function resendActivationLink(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|max:255',
         ]);
 
-        // Obtener el correo electrónico del cuerpo de la solicitud
-        $email = $request->input('email');
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
+        }
 
-        // Buscar el usuario por correo
-        $user = User::where('email', $email)->first();
+        $user = User::where('email', $request->email)->first();
 
-        // Si no se encuentra el usuario, devolver un error
         if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
+            return response()->json(['message' => 'El usuario no existe.'], 404);
         }
 
-        // Obtener los tokens asociados al usuario
-        $tokens = $user->tokens; // Asegúrate de que esto está relacionado correctamente
-
-        // Si no hay tokens asociados, devolver un mensaje adecuado
-        if ($tokens->isEmpty()) {
-            return response()->json(['message' => 'No tokens found for this user'], 404);
+        if ($user->is_active) {
+            return response()->json(['message' => 'La cuenta ya está activada.'], 400);
         }
 
-        // Preparar la respuesta en el formato deseado
-        $tokensResponse = $tokens->map(function ($token) use ($user) {
-            return [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'email_verified_at' => $user->email_verified_at,
-                    'created_at' => $user->created_at,
-                    'updated_at' => $user->updated_at,
-                ],
-                'token' => "{$token->id}|{$token->token}", // Asegúrate de que la propiedad token existe en tu modelo
-            ];
-        });
+        $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(5), ['user' => $user->id]);
+        Mail::to($request->email)->send(new AccountActivationMail($activationLink));
 
-        // Retornar la respuesta en formato JSON
-        return response()->json($tokensResponse);
+        return response()->json(['message' => 'Se ha enviado un nuevo enlace de activación a tu correo electrónico.'], 200);
     }
-    
 }

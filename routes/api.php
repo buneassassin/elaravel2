@@ -5,6 +5,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LibroController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TokenController;
+use App\Http\Controllers\EmailController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ImageController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -20,130 +24,156 @@ use App\Http\Controllers\TokenController;
 Route::get('/hello', function () {
     return 'hello';
 });
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+
+// rutas que solo puedes acceder si eres usuario 
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/user', [AuthController::class, 'me']);
 });
+
+// rutas que solo puedes acceder si eres admin }
+Route::middleware(['admin', 'auth:sanctum'])->group(function () {
+    Route::post('/activate', [AuthController::class, 'activateUser']);
+    Route::get('/admin', [AdminController::class, 'index']);
+    Route::put('/admin', [AdminController::class, 'update']);
+
+});
+Route::get('/activate/{user}', [AuthController::class, 'activateAccount'])->name('user.activate')->middleware('signed');
+Route::post('/activation-link', [AuthController::class, 'resendActivationLink'])->name('activation-link');
 
 Route::post('/register', [AuthController::class, 'register_sanctum'])->name('register');
 Route::post('/login', [AuthController::class, 'login_sanctum'])->name('login');
-Route::post('/user/tokens', [AuthController::class, 'getTokensByEmail']);
-Route::middleware('auth.jwt')->get('/me', [AuthController::class, 'me']);
+
+Route::post('/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
+Route::get('/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
+//con s3
+Route::post('/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
+Route::get('/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');
+
+
 Route::post('/token-command', [TokenController::class, 'store']);
 Route::get('/token-command', [TokenController::class, 'show']); // Ruta para buscar el token por correo
+
+//tokmail
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/index', [EmailController::class, 'index']);
+    Route::get('/email-command', [EmailController::class, 'sendEmail']);
+    Route::post('/email', [EmailController::class, 'archivo']);
+});
 
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
-// Mostrar todos
-Route::get('/libros', [LibroController::class, 'index']);
-// Crear
-Route::post('/libros/create', [LibroController::class, 'store']);
-// Uno en especifico
-Route::get('/libros/{libro}', [LibroController::class, 'show']);
-// Actualizar
-Route::put('/libros/{libro}/update', [LibroController::class, 'update']);
-// Eliminar
-Route::delete('/libros/{libro}', [LibroController::class, 'destroy']);
-//////////////////////////////////////////////////////////////////////////////
-//Mostrar todos los autores
-Route::get('/autores', [LibroController::class, 'indexAutor']);
-// Crear
-Route::post('/autores', [LibroController::class, 'storeAutor']);
-// Uno en especifico
-Route::get('/autores/{autor}', [LibroController::class, 'showAutor']);
-// Actualizar
-Route::put('/autores/{autor}', [LibroController::class, 'updateAutor']);
-// Eliminar
-Route::delete('/autores/{autor}', [LibroController::class, 'destroyAutor']);
-//////////////////////////////////////////////////////////////////////////////
-// mostrar todos los editorials
-Route::get('/editorials', [LibroController::class, 'indexEditorials']);
-// Crear
-Route::post('/editorials', [LibroController::class, 'storeEditorials']);
-// Uno en especifico
-Route::get('/editorials/{editorial}', [LibroController::class, 'showEditorials']);
-// Actualizar
-Route::put('/editorials/{editorial}', [LibroController::class, 'updateEditorials']);
-// Eliminar
-Route::delete('/editorials/{editorial}', [LibroController::class, 'destroyEditorials']);
-///////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los eventos_literarios
-Route::get('/eventos_literarios', [LibroController::class, 'indexEventos_literarios']);
-// Crear
-Route::post('/eventos_literarios', [LibroController::class, 'storeEventos_literarios']);
-// Uno en especifico
-Route::get('/eventos_literarios/{eventos_literarios}', [LibroController::class, 'showEventos_literarios']);
-// Actualizar
-Route::put('/eventos_literarios/{eventos_literarios}', [LibroController::class, 'updateEventos_literarios']);
-// Eliminar
-Route::delete('/eventos_literarios/{eventos_literarios}', [LibroController::class, 'destroyEventos_literarios']);
-//////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los lectores
-Route::get('/lectores', [LibroController::class, 'indexLectores']);
-// Crear
-Route::post('/lectores', [LibroController::class, 'storeLectores']);
-// Uno en especifico
-Route::get('/lectores/{lector}', [LibroController::class, 'showLectores']);
-// Actualizar
-Route::put('/lectores/{lector}', [LibroController::class, 'updateLectores']);
-// Eliminar
-Route::delete('/lectores/{lector}', [LibroController::class, 'destroyLectores']);
-//////////////////////////////////////////////////////////////////////////////
-// Mostrar todos lal librerías
-Route::get('/librerías', [LibroController::class, 'indexLibrerías']);
-// Crear
-Route::post('/librerías', [LibroController::class, 'storeLibrerías']);
-// Uno en especifico
-Route::get('/librerías/{librería}', [LibroController::class, 'showLibrerías']);
-// Actualizar
-Route::put('/librerías/{librería}', [LibroController::class, 'updateLibrerías']);
-// Eliminar
-Route::delete('/librerías/{librería}', [LibroController::class, 'destroyLibrerías']);
-//////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los participacion_evento
-Route::get('/participacion_evento', [LibroController::class, 'indexParticipacion_evento']);
-// Crear
-Route::post('/participacion_evento', [LibroController::class, 'storeParticipacion_evento']);
-// Uno en especifico
-Route::get('/participacion_evento/{participacion_evento}', [LibroController::class, 'showParticipacion_evento']);
-// Actualizar
-Route::put('/participacion_evento/{participacion_evento}', [LibroController::class, 'updateParticipacion_evento']);
-// Eliminar
-Route::delete('/participacion_evento/{participacion_evento}', [LibroController::class, 'destroyParticipacion_evento']);
-///////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los prestamos
-Route::get('/prestamos', [LibroController::class, 'indexPrestamos']);
-// Crear
-Route::post('/prestamos', [LibroController::class, 'storePrestamos']);
-// Uno en especifico
-Route::get('/prestamos/{prestamo}', [LibroController::class, 'showPrestamos']);
-// Actualizar
-Route::put('/prestamos/{prestamo}', [LibroController::class, 'updatePrestamos']);
-// Eliminar
-Route::delete('/prestamos/{prestamo}', [LibroController::class, 'destroyPrestamos']);
-//////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los publicaciones
-Route::get('/publicaciones', [LibroController::class, 'indexPublicaciones']);
-// Crear
-Route::post('/publicaciones', [LibroController::class, 'storePublicaciones']);
-// Uno en especifico
-Route::get('/publicaciones/{publicacion}', [LibroController::class, 'showPublicaciones']);
-// Actualizar
-Route::put('/publicaciones/{publicacion}', [LibroController::class, 'updatePublicaciones']);
-// Eliminar
-Route::delete('/publicaciones/{publicacion}', [LibroController::class, 'destroyPublicaciones']);
-/////////////////////////////////////////////////////////////////////////////
-// Mostrar todos los resenas
-Route::get('/resenas', [LibroController::class, 'indexResenas']);
-// Crear
-Route::post('/resenas', [LibroController::class, 'storeResenas']);
-// Uno en especifico
-Route::get('/resenas/{resena}', [LibroController::class, 'showResenas']);
-// Actualizar
-Route::put('/resenas/{resena}', [LibroController::class, 'updateResenas']);
-// Eliminar
-Route::delete('/resenas/{resena}', [LibroController::class, 'destroyResenas']);
-///////////////////////////////////////////////////////////////////////////
+    // Mostrar todos
+    Route::get('/v1/libros', [LibroController::class, 'index'])->middleware('checkUserRole');
+    // Crear
+    Route::post('/v1/libros', [LibroController::class, 'store'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/libros/{libro}', [LibroController::class, 'show'])->middleware('checkUserRole')
+        ->where('libro', '[0-9]+');
+    // Actualizar
+    Route::put('/v1/libros/{libro}', [LibroController::class, 'update'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/libros/{libro}', [LibroController::class, 'destroy'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    //Mostrar todos los autores
+    Route::get('/v1/autores', [LibroController::class, 'indexAutor'])->middleware('checkUserRole');
+    // Crear
+    Route::post('/v1/autores', [LibroController::class, 'storeAutor'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/autores/{autor}', [LibroController::class, 'showAutor'])->middleware('checkUserRole');
+    // Actualizar
+    Route::put('/v1/autores/{autor}', [LibroController::class, 'updateAutor'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/autores/{autor}', [LibroController::class, 'destroyAutor'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    // mostrar todos los editorials
+    Route::get('/v1/editorials', [LibroController::class, 'indexEditorials'])->middleware('checkUserRole');
+    // Crear
+    Route::post('/v1/editorials', [LibroController::class, 'storeEditorials'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/editorials/{editorial}', [LibroController::class, 'showEditorials']);
+    // Actualizar
+    Route::put('/v1/editorials/{editorial}', [LibroController::class, 'updateEditorials'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/editorials/{editorial}', [LibroController::class, 'destroyEditorials'])->middleware('admin');
+    ///////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los eventos_literarios
+    Route::get('/v1/eventos_literarios', [LibroController::class, 'indexEventos_literarios']);
+    // Crear
+    Route::post('/v1/eventos_literarios', [LibroController::class, 'storeEventos_literarios'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/eventos_literarios/{eventos_literarios}', [LibroController::class, 'showEventos_literarios']);
+    // Actualizar
+    Route::put('/v1/eventos_literarios/{eventos_literarios}', [LibroController::class, 'updateEventos_literarios'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/eventos_literarios/{eventos_literarios}', [LibroController::class, 'destroyEventos_literarios'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los lectores
+    Route::get('/v1/lectores', [LibroController::class, 'indexLectores']);
+    // Crear
+    Route::post('/v1/lectores', [LibroController::class, 'storeLectores'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/lectores/{lector}', [LibroController::class, 'showLectores']);
+    // Actualizar
+    Route::put('/v1/lectores/{lector}', [LibroController::class, 'updateLectores'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/lectores/{lector}', [LibroController::class, 'destroyLectores'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos lal librerías
+    Route::get('/v1/librerías', [LibroController::class, 'indexLibrerías']);
+    // Crear
+    Route::post('/v1/librerías', [LibroController::class, 'storeLibrerías'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/librerías/{librería}', [LibroController::class, 'showLibrerías']);
+    // Actualizar
+    Route::put('/v1/librerías/{librería}', [LibroController::class, 'updateLibrerías'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/librerías/{librería}', [LibroController::class, 'destroyLibrerías'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los participacion_evento
+    Route::get('/v1/participacion_evento', [LibroController::class, 'indexParticipacion_evento']);
+    // Crear
+    Route::post('/v1/participacion_evento', [LibroController::class, 'storeParticipacion_evento'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/participacion_evento/{participacion_evento}', [LibroController::class, 'showParticipacion_evento']);
+    // Actualizar
+    Route::put('/v1/participacion_evento/{participacion_evento}', [LibroController::class, 'updateParticipacion_evento'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/participacion_evento/{participacion_evento}', [LibroController::class, 'destroyParticipacion_evento'])->middleware('admin');
+    ///////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los prestamos
+    Route::get('/v1/prestamos', [LibroController::class, 'indexPrestamos']);
+    // Crear
+    Route::post('/v1/prestamos', [LibroController::class, 'storePrestamos'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/prestamos/{prestamo}', [LibroController::class, 'showPrestamos']);
+    // Actualizar
+    Route::put('/v1/prestamos/{prestamo}', [LibroController::class, 'updatePrestamos'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/prestamos/{prestamo}', [LibroController::class, 'destroyPrestamos'])->middleware('admin');
+    //////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los publicaciones
+    Route::get('/v1/publicaciones', [LibroController::class, 'indexPublicaciones']);
+    // Crear
+    Route::post('/v1/publicaciones', [LibroController::class, 'storePublicaciones'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/publicaciones/{publicacion}', [LibroController::class, 'showPublicaciones']);
+    // Actualizar
+    Route::put('/v1/publicaciones/{publicacion}', [LibroController::class, 'updatePublicaciones'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/publicaciones/{publicacion}', [LibroController::class, 'destroyPublicaciones'])->middleware('admin');
+    /////////////////////////////////////////////////////////////////////////////
+    // Mostrar todos los resenas
+    Route::get('/v1/resenas', [LibroController::class, 'indexResenas']);
+    // Crear
+    Route::post('/v1/resenas', [LibroController::class, 'storeResenas'])->middleware('admin');
+    // Uno en especifico
+    Route::get('/v1/resenas/{resena}', [LibroController::class, 'showResenas']);
+    // Actualizar
+    Route::put('/v1/resenas/{resena}', [LibroController::class, 'updateResenas'])->middleware('admin');
+    // Eliminar
+    Route::delete('/v1/resenas/{resena}', [LibroController::class, 'destroyResenas'])->middleware('admin');
+    ///////////////////////////////////////////////////////////////////////////
 
 
 });
