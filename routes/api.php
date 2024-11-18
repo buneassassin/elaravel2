@@ -8,6 +8,7 @@ use App\Http\Controllers\TokenController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\Juego;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +61,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/email', [EmailController::class, 'archivo']);
 });
 
+Route::middleware(['auth:sanctum','CheckUserRole','CheckActive','CheckInActive'])->group(function () {
+
+Route::post('/game', [Juego::class, 'game']);
+Route::post('/join/{id}', [Juego::class, 'join'])
+    ->where('id', '[0-9]+');
+Route::post('/barcos/{id}', [Juego::class, 'barcos'])
+    ->where('id', '[0-9]+');
+Route::post('/atacar/{id}', [Juego::class, 'atacar'])
+    ->where('id', '[0-9]+');
+Route::post('/abandonar/{id}', [Juego::class, 'abandonar'])
+    ->where('id', '[0-9]+');
+Route::post('/consultaratakes/{id}', [Juego::class, 'consultaratakes'])
+    ->where('id', '[0-9]+');
+Route::post('/consultar/{id}', [Juego::class, 'consultar'])
+    ->where('id', '[0-9]+');
+Route::post('/partidosjuego', [Juego::class, 'partidosjuego']);
+
+});
 
 
 Route::middleware(['auth:sanctum'])->group(function () {

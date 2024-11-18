@@ -4,9 +4,10 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Http\Request;
 
-class CheckUserRole
+class CheckActive
 {
     /**
      * Handle an incoming request.
@@ -17,12 +18,12 @@ class CheckUserRole
      */
     public function handle(Request $request, Closure $next)
     {
-           // Verifica si el usuario está autenticado y es usuario o administrador
-        if ( Auth::user()->role_id == 2 || Auth::user()->role_id == 3) {
+        // Verifica si el usuario está autenticado y es administrador
+        if ( Auth::user()->is_active == true) {
             return $next($request);
         }
 
         // Si no es administrador, redirige o muestra un mensaje de error
-        return response()->json(['message' => 'Acceso denegado aun no es usuario.'], 403);
+        return response()->json(['message' => 'Acceso denegado aun no esta activa.'], 403);
     }
 }

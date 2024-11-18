@@ -17,8 +17,8 @@ class RoleSeeder extends Seeder
     public function run()
     {
         // Crea los roles predeterminados
-        Role::create(['name' => 'Guest']);
-        Role::create(['name' => 'User']);
+        Role::create(['name' => 'Jugadorinctivo']);
+        Role::create(['name' => 'Jugador']);
         Role::create(['name' => 'Administrator']);
         // Crea los usuarios predeterminados como administradores
         User::factory()->create(['role_id' => 3]);

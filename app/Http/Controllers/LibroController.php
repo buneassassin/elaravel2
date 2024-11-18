@@ -29,6 +29,18 @@ class LibroController extends Controller
     // Mostrar una lista de libros
     public function index()
     {
+        //consumimos la api para obtener la lista de libros y le madamos el token por el header
+        $response = Http::post ('http://127.0.0.1:8000/api/token', [
+            'email' => 'Iy0kx@example.com',
+            'password' => '12345678'
+        
+        ]
+        );
+
+
+        if ($response->failed()) 
+
+        $data = $response->json();
 
 
 
