@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 
 class CheckInActive
 {
@@ -18,10 +19,17 @@ class CheckInActive
      */
     public function handle(Request $request, Closure $next)
     {
-        // Verifica si el usuario está autenticado y es administrador
-        if ( Auth::user()->is_Inactive == true) {
+        //sacamos el email del request
+        $email = $request->input('email');
+        if ($email==null) {
+            $email = Auth::user()->email;
+        }
+        // Verifica si el usuario esta con el email 
+        $user = User::where('email', $email)->first();    
+        if ($user->is_inactive == true) {
             return $next($request);
         }
+    
 
         // Si no es administrador, redirige o muestra un mensaje de error
         return response()->json(['message' => 'Acceso denegado Cuenta inactiva.'], 403);

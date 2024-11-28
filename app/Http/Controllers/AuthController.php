@@ -41,7 +41,9 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role_id' => 1,
             'is_active' => false,
+            'is_inactive' => true,
             'profile_picture' => null,
+            'activation_token' => null
         ]);
 
         $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(1), ['user' => $user->id]);

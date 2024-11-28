@@ -20,7 +20,5 @@ class RoleSeeder extends Seeder
         Role::create(['name' => 'Jugadorinctivo']);
         Role::create(['name' => 'Jugador']);
         Role::create(['name' => 'Administrator']);
-        // Crea los usuarios predeterminados como administradores
-        User::factory()->create(['role_id' => 3]);
     }
 }

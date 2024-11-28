@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         // \App\Models\User::factory(10)->create();
-        Autor::factory(5)->create();
+       /* Autor::factory(5)->create();
         Editorial::factory(5)->create();
         Libro::factory(5)->create();
         Lector::factory(5)->create();
@@ -37,7 +37,7 @@ class DatabaseSeeder extends Seeder
         EventoLiterario::factory(5)->create();
         Inventario::factory(5)->create();
         ParticipacionEvento::factory(5)->create();
-
+*/
 
     }
 }

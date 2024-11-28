@@ -54,7 +54,7 @@ class ImageController extends Controller
         $user = auth()->user();
         // Validar la imagen
         $validator = Validator::make($request->all(), [
-            'archivo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -65,7 +65,7 @@ class ImageController extends Controller
             $user = auth()->user();
 
 
-            $imagen = $request->file('archivo');
+            $imagen = $request->file('profile_picture');
 
             $path = Storage::disk('s3')->put('23170153', $imagen);
 

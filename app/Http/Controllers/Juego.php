@@ -12,7 +12,7 @@ class Juego extends Controller
         $id_user = auth()->user()->id;
 
         $response = Http::post(
-            env('API_URL') + '/api/game',
+            env('API_URL') . '/game',
             [
                 'userid' => $id_user
 
@@ -25,7 +25,7 @@ class Juego extends Controller
     {
         $id_user = auth()->user()->id;
         $response = Http::post(
-            env('API_URL') + '/api/join/' + $id,
+            env('API_URL') . '/join/' . $id,
             [
                 'userid' => $id_user
             ]
@@ -42,7 +42,7 @@ class Juego extends Controller
 
         // Realiza la solicitud POST a la API externa con los datos dinámicos
         $response = Http::post(
-            env('API_URL') . '/api/barcos/' . $id,
+            env('API_URL') . '/barcos/' . $id,
             [
                 'userid' => $id_user,  // Usamos el id_user enviado en el request
                 'ships' => $ships       // Los barcos también provienen del request
@@ -64,7 +64,7 @@ class Juego extends Controller
 
         // Realiza la solicitud POST con los datos apropiados
         $response = Http::post(
-            env('API_URL') . '/api/atacar/' . $id,
+            env('API_URL') . '/atacar/' . $id,
             [
                 'userid' => $id_user,  // El id del usuario autenticado
                 'x' => $x,              // Coordenada x
@@ -80,7 +80,7 @@ class Juego extends Controller
     {
         $id_user = auth()->user()->id;
         $response = Http::post(
-            env('API_URL') + '/api/abandonar/' + $id,
+            env('API_URL') . '/abandonar/' . $id,
             [
                 'userid' => $id_user
             ]
@@ -92,7 +92,7 @@ class Juego extends Controller
     {
         $id_user = auth()->user()->id;
         $response = Http::post(
-            env('API_URL') + '/api/consultaratakes/' + $id,
+            env('API_URL') . '/consultaratakes/' . $id,
             [
                 'userid' => $id_user
             ]
@@ -104,7 +104,7 @@ class Juego extends Controller
     {
         $id_user = auth()->user()->id;
         $response = Http::post(
-            env('API_URL') + '/api/consultar/' + $id,
+            env('API_URL') . '/consultar/' . $id,
             [
                 'userid' => $id_user
             ]
@@ -116,7 +116,7 @@ class Juego extends Controller
     {
         $id_user = auth()->user()->id;
         $response = Http::post(
-            env('API_URL') + '/api/partidosjuego',
+            env('API_URL') . '/partidosjuego',
             [
                 'userid' => $id_user
             ]
@@ -124,4 +124,27 @@ class Juego extends Controller
 
         return $response->json();
     }
+    public function listGames(){
+        $id_user = auth()->user()->id;
+        $response = Http::get(
+            env('API_URL') . '/gamesview',
+            [
+                'userid' => $id_user
+            ]
+        );
+
+        return $response->json();
+    }
+    public function showGame( $id){
+        $id_user = auth()->user()->id;
+        $response = Http::get(
+            env('API_URL') . '/gamesview/' . $id,
+            [
+                'userid' => $id_user
+            ]
+        );
+
+        return $response->json();
+    }
+
 }

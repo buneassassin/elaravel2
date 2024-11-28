@@ -10,6 +10,6 @@ class AutorSeeder extends Seeder
 {
     public function run()
     {
-        Autor::factory(10)->create();
+       // Autor::factory(10)->create();
     }
 }

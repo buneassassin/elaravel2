@@ -30,29 +30,32 @@ Route::get('/hello', function () {
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
 });
-
 // rutas que solo puedes acceder si eres admin }
-Route::middleware(['admin', 'auth:sanctum'])->group(function () {
-    Route::post('/activate', [AuthController::class, 'activateUser']);
-    Route::get('/admin', [AdminController::class, 'index']);
-    Route::put('/admin', [AdminController::class, 'update']);
-
+Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
+    Route::post('/v1/activate', [AdminController::class, 'activateUser']);
+    Route::get('/v1/admin', [AdminController::class, 'index']);
+    Route::put('/v1/admin', [AdminController::class, 'update']);
+    Route::post('/v1/baja', [AdminController::class, 'baja']);
+    Route::get('/v1/gamesview', [juego::class, 'listGames']);
+    Route::get('/v1/gamesview/{id}', [juego::class, 'showGame'])
+        ->where('id', '[0-9]+');
 });
+
 Route::get('/activate/{user}', [AuthController::class, 'activateAccount'])->name('user.activate')->middleware('signed');
-Route::post('/activation-link', [AuthController::class, 'resendActivationLink'])->name('activation-link');
+Route::post('/v1/renviar', [AuthController::class, 'resendActivationLink'])->name('activation-link')->middleware('checkinactive');
 
-Route::post('/register', [AuthController::class, 'register_sanctum'])->name('register');
-Route::post('/login', [AuthController::class, 'login_sanctum'])->name('login');
+Route::post('/v1/register', [AuthController::class, 'register_sanctum'])->name('register');
+Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login')->middleware(['checkinactive']);
 
-Route::post('/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
-Route::get('/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
+Route::post('/v1/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
+Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
 //con s3
-Route::post('/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
-Route::get('/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');
+Route::post('/v1/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
+Route::get('/v1/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');
 
 
 Route::post('/token-command', [TokenController::class, 'store']);
-Route::get('/token-command', [TokenController::class, 'show']); // Ruta para buscar el token por correo
+Route::get('/token-command', [TokenController::class, 'show']);
 
 //tokmail
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -60,27 +63,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/email-command', [EmailController::class, 'sendEmail']);
     Route::post('/email', [EmailController::class, 'archivo']);
 });
+//juego
+Route::middleware(['auth:sanctum','checkrole', 'checkactive', 'checkinactive'])->group(function () {
 
-Route::middleware(['auth:sanctum','CheckUserRole','CheckActive','CheckInActive'])->group(function () {
-
-Route::post('/game', [Juego::class, 'game']);
-Route::post('/join/{id}', [Juego::class, 'join'])
-    ->where('id', '[0-9]+');
-Route::post('/barcos/{id}', [Juego::class, 'barcos'])
-    ->where('id', '[0-9]+');
-Route::post('/atacar/{id}', [Juego::class, 'atacar'])
-    ->where('id', '[0-9]+');
-Route::post('/abandonar/{id}', [Juego::class, 'abandonar'])
-    ->where('id', '[0-9]+');
-Route::post('/consultaratakes/{id}', [Juego::class, 'consultaratakes'])
-    ->where('id', '[0-9]+');
-Route::post('/consultar/{id}', [Juego::class, 'consultar'])
-    ->where('id', '[0-9]+');
-Route::post('/partidosjuego', [Juego::class, 'partidosjuego']);
-
+    Route::post('/v1/game', [Juego::class, 'game']);
+    Route::post('/v1/join/{id}', [Juego::class, 'join'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/barcos/{id}', [Juego::class, 'barcos'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/atacar/{id}', [Juego::class, 'atacar'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/abandonar/{id}', [Juego::class, 'abandonar'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/consultaratakes/{id}', [Juego::class, 'consultaratakes'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/consultar/{id}', [Juego::class, 'consultar'])
+        ->where('id', '[0-9]+');
+    Route::post('/v1/partidosjuego', [Juego::class, 'partidosjuego']);
 });
-
-
+//Tablas
 Route::middleware(['auth:sanctum'])->group(function () {
     // Mostrar todos
     Route::get('/v1/libros', [LibroController::class, 'index'])->middleware('checkUserRole');

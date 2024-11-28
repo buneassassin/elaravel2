@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
+        // Verificar la existencia de la tabla personal_access_tokens
+        if (Schema::hasTable('personal_access_tokens')) {
+            return;
+        }
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
             $table->morphs('tokenable');
