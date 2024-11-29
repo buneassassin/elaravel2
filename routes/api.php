@@ -8,6 +8,7 @@ use App\Http\Controllers\TokenController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\GameController;
 use App\Http\Controllers\Juego;
 
 /*
@@ -32,27 +33,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 // rutas que solo puedes acceder si eres admin }
 Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
-    Route::post('/v1/activate', [AdminController::class, 'activateUser']);
+    Route::post('/v1/activacion', [AdminController::class, 'activateUser']);
     Route::get('/v1/admin', [AdminController::class, 'index']);
     Route::put('/v1/admin', [AdminController::class, 'update']);
     Route::post('/v1/baja', [AdminController::class, 'baja']);
     Route::get('/v1/gamesview', [juego::class, 'listGames']);
     Route::get('/v1/gamesview/{id}', [juego::class, 'showGame'])
         ->where('id', '[0-9]+');
+    // Rutas de administrador
+    Route::get('/v1/report', [GameController::class, 'adminReport']);
+
 });
 
 Route::get('/activate/{user}', [AuthController::class, 'activateAccount'])->name('user.activate')->middleware('signed');
-Route::post('/v1/renviar', [AuthController::class, 'resendActivationLink'])->name('activation-link')->middleware('checkinactive');
+//Route::post('/v1/renviar', [AuthController::class, 'resendActivationLink'])->name('activation-link')->middleware('checkinactive');
 
 Route::post('/v1/register', [AuthController::class, 'register_sanctum'])->name('register');
-Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login')->middleware(['checkinactive']);
-
-Route::post('/v1/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
-Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
-//con s3
-Route::post('/v1/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
-Route::get('/v1/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');
-
+Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login')->middleware(['checkinactive', 'checkactive']);
+Route::post('/v1/activate', [AuthController::class, 'activateAccountWas']);
+Route::post('/v1/renviar', [AuthController::class, 'resendActivationCode'])->name('activation-link')->middleware('checkinactive');
 
 Route::post('/token-command', [TokenController::class, 'store']);
 Route::get('/token-command', [TokenController::class, 'show']);
@@ -63,8 +62,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/email-command', [EmailController::class, 'sendEmail']);
     Route::post('/email', [EmailController::class, 'archivo']);
 });
+Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
+    // Rutas de juego
+Route::post('/v1/games', [GameController::class, 'createGame']);
+Route::post('/v1/games/{game}', [GameController::class, 'guess'])
+    ->where('game', '[0-9]+');
+Route::get('/v1/games/{game}', [GameController::class, 'status'])
+    ->where('game', '[0-9]+');
+Route::get('/v1/gamesall', [GameController::class, 'availableGames']);
+Route::delete('/v1/games/{game}', [GameController::class, 'abandonGame'])
+    ->where('game', '[0-9]+');
+Route::get('/v1/gamesH', [GameController::class, 'userHistory']);
+
+Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
+});
+
 //juego
-Route::middleware(['auth:sanctum','checkrole', 'checkactive', 'checkinactive'])->group(function () {
+Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
 
     Route::post('/v1/game', [Juego::class, 'game']);
     Route::post('/v1/join/{id}', [Juego::class, 'join'])
@@ -197,3 +211,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
 });
+Route::post('/v1/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
+Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
+//con s3
+Route::post('/v1/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
+Route::get('/v1/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');

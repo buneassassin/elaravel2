@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Mail\AccountActivationMail;
 use App\Mail\AdminNotificationMail;
 use Illuminate\Support\Facades\Validator;
+use Twilio\Rest\Client;
+use Twilio\Http\CurlClient;
 
 class AuthController extends Controller
 {
@@ -19,37 +21,184 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
+            'telefono' => 'required|string|min:10',
         ]);
-        
+
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Los datos proporcionados son inválidos.',
                 'errors' => $validator->errors()
             ], 422);
         }
-        
-        //verificar si el correo ya esta registrado
 
-        $user = User::where('email', $request->email)->first();
-        if ($user) {
+        // Verificar si el correo ya está registrado
+        $existingUser = User::where('email', $request->email)->first();
+        if ($existingUser) {
             return response()->json(['message' => 'El usuario ya existe.'], 400);
         }
 
-        $user = User::create([
+        // Crear un código de activación aleatorio
+        $activationCode = random_int(100000, 999999);
+
+        // Crear el usuario
+        User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role_id' => 1,
-            'is_active' => false,
-            'is_inactive' => true,
-            'profile_picture' => null,
-            'activation_token' => null
+            'phone' => $request->telefono,
+            'role_id' => 1, // Rol predeterminado
+            'is_active' => false, // Cuenta desactivada inicialmente
+            'activation_token' => $activationCode, // Guardar el código de activación
         ]);
 
-        $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(1), ['user' => $user->id]);
-        Mail::to($request->email)->send(new AccountActivationMail($activationLink));
+        // Enviar el código de activación por WhatsApp
+        $this->sendActivationCode($request->telefono, $activationCode);
 
-        return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu correo para activar la cuenta.'], 201);
+        return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu WhatsApp para activar tu cuenta.'], 201);
+    }
+
+    private function sendActivationCode( $activationCode)
+    {
+        $sid = env('TWILIO_SID'); // Tu Twilio SID
+        $token = env('TWILIO_AUTH_TOKEN'); // Tu Twilio Auth Token
+        $from = "whatsapp:+14155238886"; // Número de Twilio habilitado para WhatsApp
+        $to = "whatsapp:+5218714307468"; // Destino en formato internacional
+
+        try {
+            // Configurar opciones cURL para ignorar SSL (solo pruebas locales)
+            $options = [
+                CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar validación del certificado
+                CURLOPT_SSL_VERIFYHOST => 0,    // No verificar el nombre del host
+            ];
+            $httpClient = new CurlClient($options);
+
+            // Crear el cliente de Twilio
+            $twilio = new Client($sid, $token);
+
+            // Configurar el cliente HTTP
+            $twilio->setHttpClient($httpClient);
+
+            // Enviar el mensaje
+            $twilio->messages->create(
+                $to,
+                [
+                    "from" => $from,
+                    "body" => "Tu código de activación es: $activationCode. Por favor, úsalo para activar tu cuenta. 🚀"
+                ]
+            );
+        } catch (\Exception $e) {
+            // Manejar errores
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function resendActivationCode(Request $request)
+    {
+        // Validar que se proporcione el correo
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|max:255',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'El correo proporcionado no es válido.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+    
+        // Buscar al usuario por correo
+        $user = User::where('email', $request->email)->first();
+    
+        if (!$user) {
+            return response()->json(['message' => 'El usuario no existe.'], 404);
+        }
+    
+        // Verificar si el usuario ya está activo
+        if ($user->is_active) {
+            return response()->json(['message' => 'El usuario ya está activado.'], 400);
+        }
+    
+        // Reenviar el código de activación al teléfono del usuario
+        $this->sendActivationCode($user->phone, $user->activation_token);
+    
+        return response()->json(['message' => 'El código de activación ha sido reenviado. Revisa tu WhatsApp.'], 200);
+    }
+    
+
+    private function sendmessage( $message)
+    {
+        $sid = env('TWILIO_SID'); // Tu Twilio SID
+        $token = env('TWILIO_AUTH_TOKEN'); // Tu Twilio Auth Token
+        $from = "whatsapp:+14155238886"; // Número de Twilio habilitado para WhatsApp
+        $to = "whatsapp:+5218714307468"; // Destino en formato internacional
+
+        try {
+            // Configurar opciones cURL para ignorar SSL (solo pruebas locales)
+            $options = [
+                CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar validación del certificado
+                CURLOPT_SSL_VERIFYHOST => 0,    // No verificar el nombre del host
+            ];
+            $httpClient = new CurlClient($options);
+
+            // Crear el cliente de Twilio
+            $twilio = new Client($sid, $token);
+
+            // Configurar el cliente HTTP
+            $twilio->setHttpClient($httpClient);
+
+            // Enviar el mensaje
+            $twilio->messages->create(
+                $to,
+                [
+                    "from" => $from,
+                    "body" => "Nuevo usruario registrado: $message. 🚀"
+                ]
+            );
+        } catch (\Exception $e) {
+            // Manejar errores
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function activateAccountWas(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'code' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Los datos proporcionados son inválidos.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Verificar el usuario y el código de activación
+        $user = User::where('email', $request->email)
+            ->where('activation_token', $request->code)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Código de activación inválido.'], 400);
+        }
+
+        // Activar la cuenta
+        $user->is_active = true;
+        $user->activation_token = null; // Eliminar el token una vez activado
+        $user->save();
+        //enviamos un mesaje de notificacion al admin por WhatsApp de usario activado
+        //buscmos el telefono del admin
+        $admin = User::where('role_id', 3)->first();
+        if ($admin) {
+            $this->sendmessage('Cuenta activada' . $user->name . ' ' . $user->email . ' ' . $user->phone);
+        }
+
+        return response()->json(['message' => 'Cuenta activada con éxito.'], 200);
     }
 
     public function login_sanctum(Request $request)
@@ -62,15 +211,12 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
         }
-
+        // Verificar las que los datos no sean null
+      
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['error' => 'Credenciales inválidas'], 401);
-        }
-
-        if (!$user->is_active) {
-            return response()->json(['error' => 'Cuenta no activada. Por favor, revisa tu correo para activarla.'], 403);
         }
 
         $token = $user->createToken("Mi_dispositivo")->plainTextToken;
