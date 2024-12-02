@@ -16,6 +16,8 @@ use App\Models\Resena;
 use App\Models\Inventario;
 use App\Models\Token;
 
+//Validaciones
+use Illuminate\Support\Facades\Validator;
 use Database\Seeders\DatabaseSeeder;
 use Dflydev\DotAccessData\Data;
 use Illuminate\Http\Request;
@@ -29,27 +31,21 @@ class LibroController extends Controller
     // Mostrar una lista de libros
     public function index()
     {
-        //consumimos la api para obtener la lista de libros y le madamos el token por el header
-        $response = Http::post ('http://127.0.0.1:8000/api/token', [
-            'email' => 'Iy0kx@example.com',
-            'password' => '12345678'
-        
-        ]
-        );
-
-
-        if ($response->failed()) 
-
-        $data = $response->json();
-
-
-
+        //vereficar si hay libros
+        $libros = Libro::all();
+        if ($libros->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay libros en la base de datos',
+            ], 404);
+        }
         $libros = Libro::with([
             'autor', // Información del autor
             'publicaciones.editorial', // Información de las publicaciones y editoriales
             'resenas.lector', // Información de las reseñas y los lectores que las escribieron
             'inventarios.libreria' // Información de los inventarios y las librerías
         ])->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Lista de libros',
@@ -60,13 +56,30 @@ class LibroController extends Controller
     // Almacenar un nuevo libro 
     public function store(Request $request)
     {
-
-        $request->validate([
+        // Verificar la validación de los datos
+        $validator = Validator::make($request->all(), [
             'titulo' => 'required|string|max:255',
             'genero' => 'required|string|max:255',
             'nombre' => 'required|string|max:255',
             'nacionalidad' => 'required|string|max:255',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errors' => $validator->errors(),
+            ], 400);
+        }
+
+        // Verificar si el libro ya existe
+        $libro = Libro::where('titulo', $request->input('titulo'))->first();
+        if ($libro) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El libro ya existe',
+            ], 400);
+        }
 
         // Crear el autor
         $autor = Autor::create([
@@ -91,8 +104,6 @@ class LibroController extends Controller
     // Mostrar un libro específico
     public function show($id)
     {
-
-
         // Buscar el libro por su ID y cargar las relaciones
         $libro = Libro::with([
             'autor', // Información del autor
@@ -117,62 +128,89 @@ class LibroController extends Controller
         ]);
     }
     // Actualizar un libro 
-    public function update(Request $request, Libro $libro, Autor $autor)
+    public function update(Request $request, $id)
     {
+        // Buscar el libro por ID
+        $libro = Libro::find($id);
 
+        // Si no se encuentra el libro, devolver un mensaje personalizado
+        if (!$libro) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El libro con el ID especificado no existe.',
+            ], 404);
+        }
 
-
-        $request->validate([
+        // Continuar con la lógica normal si el libro existe
+        $validator = Validator::make($request->all(), [
             'titulo' => 'required|string|max:255',
             'genero' => 'required|string|max:255',
             'nombre' => 'required|string|max:255',
             'nacionalidad' => 'required|string|max:255',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errors' => $validator->errors(),
+            ], 400);
+        }
+
+        // Actualizar el libro
         $libro->update([
             'titulo' => $request->input('titulo'),
             'genero' => $request->input('genero'),
-            'autor_id' => $libro->autor_id,  // Asignar el id del autor reciente creado
-        ]);
-        $autor->update([
-            'nacionalidad' => $request->input('nacionalidad'),
-            'nombre' => $request->input('nombre'),
         ]);
 
+        // Actualizar el autor relacionado
+        $autor = Autor::find($libro->autor_id);
+        if ($autor) {
+            $autor->update([
+                'nombre' => $request->input('nombre'),
+                'nacionalidad' => $request->input('nacionalidad'),
+            ]);
+        }
 
-        // Devuelve la respuesta JSON con los datos actualizados
+        // Respuesta de éxito
         return response()->json([
+            'success' => true,
+            'message' => 'Libro y autor actualizados correctamente.',
             'libro' => $libro,
             'autor' => $autor,
-        ]);
+        ], 200);
     }
+
     // Eliminar un libro de la base de datos
     public function destroy($id)
     {
-
         // Cargar el libro con las relaciones necesarias
-        $libro = Libro::with(['resenas', 'publicaciones', 'inventarios', 'autor',])->find($id);
-
-
+        $libro = Libro::with(['resenas', 'publicaciones', 'inventarios', 'autor'])->find($id);
+    
         if (!$libro) {
             return response()->json([
                 'success' => false,
                 'message' => 'Libro no encontrado'
             ], 404);
         }
-
+    
         try {
-
             // Eliminar las reseñas relacionadas
             $libro->resenas()->delete();
             // Eliminar las publicaciones relacionadas
             $libro->publicaciones()->delete();
-
             // Eliminar los inventarios relacionados
-            $libro->inventarios()->delete(); // Asegúrate de que 'inventarios' esté definido en el modelo
-
+            $libro->inventarios()->delete();
+    
             // Ahora eliminar el libro
             $libro->delete();
-            return response()->json(['message' => 'Libro eliminado exitosamente'], 204);
+    
+            // Respuesta con código 200 para incluir un mensaje JSON
+            return response()->json([
+                'success' => true,
+                'message' => 'Libro eliminado exitosamente'
+            ], 200);
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -181,6 +219,7 @@ class LibroController extends Controller
             ], 500);
         }
     }
+    
     ///////////////////////////////////////////////////////////////////////////
     public function indexAutor()
     {

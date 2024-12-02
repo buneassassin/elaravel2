@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class CheckActive
 {
@@ -18,12 +18,37 @@ class CheckActive
      */
     public function handle(Request $request, Closure $next)
     {
-        // Verifica si el usuario está autenticado y es administrador
-        if ( Auth::user()->is_active == true) {
+        // Sacamos el email del request
+        $email = $request->input('email');
+    
+        // Si no hay un email en el request, intentamos obtenerlo del usuario autenticado
+        if ($email == null) {
+            // Comprobamos si el usuario está autenticado
+            if (Auth::check()) {
+                // Si el usuario está autenticado, obtenemos su email
+                $email = Auth::user()->email;
+            } else {
+                // Si no está autenticado, devolvemos un error indicando que no se proporcionaron datos de usuario
+                return response()->json(['message' => 'Datos de usuario no proporcionados.'], 401);
+            }
+        }
+    
+        // Verificamos si el usuario existe en la base de datos
+        $user = User::where('email', $email)->first();
+    
+        // Si el usuario no existe, devolvemos un mensaje indicando que los datos del usuario no son válidos
+        if ($user == null) {
+            return response()->json(['message' => 'Datos de usuario no proporcionados.'], 404);
+        }
+    
+        // Verificamos si el usuario está activo
+        if ($user->is_active) {
+            // Si el usuario está activo, continuamos con la solicitud
             return $next($request);
         }
-
-        // Si no es administrador, redirige o muestra un mensaje de error
-        return response()->json(['message' => 'Acceso denegado aun no esta activa.'], 403);
+    
+        // Si el usuario no está activo, devolvemos un mensaje de acceso denegado
+        return response()->json(['message' => 'Acceso denegado, el usuario aún no está activo.'], 403);
     }
+    
 }
