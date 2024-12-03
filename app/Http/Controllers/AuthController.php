@@ -21,7 +21,6 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
-            'telefono' => 'required|string|min:10',
         ]);
 
         if ($validator->fails()) {
@@ -45,14 +44,13 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'phone' => $request->telefono,
             'role_id' => 1, // Rol predeterminado
             'is_active' => false, // Cuenta desactivada inicialmente
             'activation_token' => $activationCode, // Guardar el código de activación
         ]);
 
         // Enviar el código de activación por WhatsApp
-        $this->sendActivationCode($request->telefono, $activationCode);
+        $this->sendActivationCode( $activationCode);
 
         return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu WhatsApp para activar tu cuenta.'], 201);
     }
@@ -83,7 +81,7 @@ class AuthController extends Controller
                 $to,
                 [
                     "from" => $from,
-                    "body" => "Tu código de activación es: $activationCode. Por favor, úsalo para activar tu cuenta. 🚀"
+                    "body" => "Tu código de activación es: ". $activationCode.". Por favor, úsalo para activar tu cuenta. 🚀"
                 ]
             );
         } catch (\Exception $e) {

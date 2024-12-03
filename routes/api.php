@@ -9,6 +9,7 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\WordleController;
 use App\Http\Controllers\Juego;
 
 /*
@@ -43,6 +44,8 @@ Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
     // Rutas de administrador
     Route::get('/v1/report', [GameController::class, 'adminReport']);
 
+    Route::get('/v1/attempt_report', [WordleController::class, 'adminReport']);
+
 });
 
 Route::get('/activate/{user}', [AuthController::class, 'activateAccount'])->name('user.activate')->middleware('signed');
@@ -64,17 +67,29 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
     // Rutas de juego
-Route::post('/v1/games', [GameController::class, 'createGame']);
-Route::post('/v1/games/{game}', [GameController::class, 'guess'])
-    ->where('game', '[0-9]+');
-Route::get('/v1/games/{game}', [GameController::class, 'status'])
-    ->where('game', '[0-9]+');
-Route::get('/v1/gamesall', [GameController::class, 'availableGames']);
-Route::delete('/v1/games/{game}', [GameController::class, 'abandonGame'])
-    ->where('game', '[0-9]+');
-Route::get('/v1/gamesH', [GameController::class, 'userHistory']);
+    Route::post('/v1/games', [GameController::class, 'createGame']);
+    Route::post('/v1/games/{game}', [GameController::class, 'guess'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/games/{game}', [GameController::class, 'status'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/gamesall', [GameController::class, 'availableGames']);
+    Route::delete('/v1/games/{game}', [GameController::class, 'abandonGame'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/gamesH', [GameController::class, 'userHistory']);
+    //////////////////////////////////////////////////////////////////////////////
+    Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
+    //////////////////////////////////////////////////////////////////////////////
+    //Attempt
+    Route::post('/v1/attempt', [WordleController::class, 'createJuego']);
+    Route::post('/v1/attempt/{Attempt}', [WordleController::class, 'makeAttempt'])
+        ->where('Attempt', '[0-9]+');
+    Route::get('/v1/attempt/{Attempt}', [WordleController::class, 'JuegoStatus'])
+        ->where('Attempt', '[0-9]+');
+    Route::get('/v1/attemptall', [WordleController::class, 'availableJuego']);
+    Route::delete('/v1/attempt/{Attempt}', [WordleController::class, 'abandonJuego'])
+        ->where('Attempt', '[0-9]+');
+    Route::get('/v1/attemptH', [WordleController::class, 'userHistory']);
 
-Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
 });
 
 //juego

@@ -52,8 +52,6 @@ class GameController extends Controller
             ]);
         }
     }
-
-
     public function userHistory()
     {
         // Obtener el ID del usuario autenticado
@@ -92,8 +90,6 @@ class GameController extends Controller
             'games' => $gamesHistory
         ]);
     }
-    
-
     public function generateRandomWord($length)
     {
         // Array con palabras en español
@@ -264,7 +260,6 @@ class GameController extends Controller
         // Recortar la palabra si excede la longitud deseada
         return substr($randomWord, 0, $length);
     }
-
     public function availableGames()
     {
         // Obtener todos los juegos activos (no completados y con palabra asignada)
@@ -285,8 +280,6 @@ class GameController extends Controller
             'games' => $games
         ]);
     }
-    
-    
     public function createGame()
     {
         $userId = auth()->user()->id;
@@ -337,9 +330,6 @@ class GameController extends Controller
             ]
         ]);
     }
-    
-
-
     public function guess(Request $request, $id)
     {
         try {
@@ -425,11 +415,6 @@ class GameController extends Controller
             'attempted_letters' => $attemptedLetters,
         ]);
     }
-
-
-
-
-
     public function abandonGame($id)
     {
         $userId = auth()->user()->id;
@@ -466,8 +451,6 @@ class GameController extends Controller
             'lost_games' => $lostGames,
         ]);
     }
-
-
     public function status($id)
     {
         $game = Game::findOrFail($id);
