@@ -3,6 +3,11 @@
 namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Container\Container;
+use App\Jobs\SendGameSummaryToSlack;
+use Illuminate\Support\Facades\DB;
+
 
 class Kernel extends HttpKernel
 {
@@ -53,7 +58,7 @@ class Kernel extends HttpKernel
      *
      * @var array<string, class-string|string>
      */
-    protected $routeMiddleware = [ 
+    protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
@@ -67,6 +72,16 @@ class Kernel extends HttpKernel
         'checkactive' => \App\Http\Middleware\CheckActive::class,
         'checkinactive' => \App\Http\Middleware\CheckInActive::class,
         'checkrole' => \App\Http\Middleware\CheckUserRole::class
-        
+
     ];
+     /**
+     * Define the application's command schedule.
+     */
+  
+   /**
+     * Define the application's command schedule.
+     *
+     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @return void
+     */
 }

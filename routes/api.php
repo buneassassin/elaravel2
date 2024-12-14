@@ -35,17 +35,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // rutas que solo puedes acceder si eres admin }
 Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
     Route::post('/v1/activacion', [AdminController::class, 'activateUser']);
+    Route::post('/v1/baja', [AdminController::class, 'baja']);
+    
     Route::get('/v1/admin', [AdminController::class, 'index']);
     Route::put('/v1/admin', [AdminController::class, 'update']);
-    Route::post('/v1/baja', [AdminController::class, 'baja']);
+    /*
     Route::get('/v1/gamesview', [juego::class, 'listGames']);
     Route::get('/v1/gamesview/{id}', [juego::class, 'showGame'])
         ->where('id', '[0-9]+');
-    // Rutas de administrador
-    Route::get('/v1/report', [GameController::class, 'adminReport']);
+    */
+    Route::get('/v1/juego1report', [GameController::class, 'adminReport']);
+    Route::get('/v1/juego2report', [WordleController::class, 'adminReport']);
 
-    Route::get('/v1/attempt_report', [WordleController::class, 'adminReport']);
-
+    Route::get('/v1/jugadoresall', [AdminController::class, 'jugadoresall']);
 });
 
 Route::get('/activate/{user}', [AuthController::class, 'activateAccount'])->name('user.activate')->middleware('signed');
@@ -56,39 +58,32 @@ Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login'
 Route::post('/v1/activate', [AuthController::class, 'activateAccountWas']);
 Route::post('/v1/renviar', [AuthController::class, 'resendActivationCode'])->name('activation-link')->middleware('checkinactive');
 
-Route::post('/token-command', [TokenController::class, 'store']);
-Route::get('/token-command', [TokenController::class, 'show']);
-
-//tokmail
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/index', [EmailController::class, 'index']);
-    Route::get('/email-command', [EmailController::class, 'sendEmail']);
-    Route::post('/email', [EmailController::class, 'archivo']);
-});
 Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
-    // Rutas de juego
-    Route::post('/v1/games', [GameController::class, 'createGame']);
-    Route::post('/v1/games/{game}', [GameController::class, 'guess'])
-        ->where('game', '[0-9]+');
-    Route::get('/v1/games/{game}', [GameController::class, 'status'])
-        ->where('game', '[0-9]+');
-    Route::get('/v1/gamesall', [GameController::class, 'availableGames']);
-    Route::delete('/v1/games/{game}', [GameController::class, 'abandonGame'])
-        ->where('game', '[0-9]+');
-    Route::get('/v1/gamesH', [GameController::class, 'userHistory']);
     //////////////////////////////////////////////////////////////////////////////
     Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
     //////////////////////////////////////////////////////////////////////////////
+    // Ahorcado
+    Route::post('/v1/juego1', [GameController::class, 'createGame']);
+    Route::post('/v1/juego1/{game}', [GameController::class, 'guess'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/juego1/{game}', [GameController::class, 'status'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/juego1all', [GameController::class, 'availableGames']);
+    Route::delete('/v1/juego1/{game}', [GameController::class, 'abandonGame'])
+        ->where('game', '[0-9]+');
+    Route::get('/v1/juego1H', [GameController::class, 'userHistory']);
+    //////////////////////////////////////////////////////////////////////////////
     //Attempt
-    Route::post('/v1/attempt', [WordleController::class, 'createJuego']);
-    Route::post('/v1/attempt/{Attempt}', [WordleController::class, 'makeAttempt'])
+    Route::post('/v1/juego2', [WordleController::class, 'createJuego']);
+    Route::post('/v1/juego2/{Attempt}', [WordleController::class, 'makeAttempt'])
         ->where('Attempt', '[0-9]+');
-    Route::get('/v1/attempt/{Attempt}', [WordleController::class, 'JuegoStatus'])
+    Route::get('/v1/juego2/{Attempt}', [WordleController::class, 'JuegoStatus'])
         ->where('Attempt', '[0-9]+');
-    Route::get('/v1/attemptall', [WordleController::class, 'availableJuego']);
-    Route::delete('/v1/attempt/{Attempt}', [WordleController::class, 'abandonJuego'])
+    Route::get('/v1/juego2all', [WordleController::class, 'availableJuego']);
+    Route::delete('/v1/juego2/{Attempt}', [WordleController::class, 'abandonJuego'])
         ->where('Attempt', '[0-9]+');
-    Route::get('/v1/attemptH', [WordleController::class, 'userHistory']);
+    Route::get('/v1/juego2H', [WordleController::class, 'userHistory']);
+    //////////////////////////////////////////////////////////////////////////////
 
 });
 
@@ -231,3 +226,13 @@ Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware
 //con s3
 Route::post('/v1/picture-s3', [ImageController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
 Route::get('/v1/picture-s3', [ImageController::class, 'getProfilePicture'])->middleware('auth:sanctum');
+
+Route::post('/token-command', [TokenController::class, 'store']);
+Route::get('/token-command', [TokenController::class, 'show']);
+
+//tokmail
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/index', [EmailController::class, 'index']);
+    Route::get('/email-command', [EmailController::class, 'sendEmail']);
+    Route::post('/email', [EmailController::class, 'archivo']);
+});

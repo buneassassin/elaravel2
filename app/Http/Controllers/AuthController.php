@@ -12,9 +12,24 @@ use App\Mail\AdminNotificationMail;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client;
 use Twilio\Http\CurlClient;
+use App\Services\TwilioService;
 
 class AuthController extends Controller
 {
+    protected $twilioService;
+
+    public function __construct(TwilioService $twilioService)
+    {
+        $this->twilioService = $twilioService;
+    }
+    
+    public function sendLetterMessage($message)
+    {
+        $to = "whatsapp:+5218714307468";
+        $result = $this->twilioService->sendMessage($to, $message);
+
+        return response()->json($result);
+    } 
     public function register_sanctum(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -50,20 +65,18 @@ class AuthController extends Controller
         ]);
 
         // Enviar el código de activación por WhatsApp
-        $this->sendActivationCode( $activationCode);
+        $this->sendActivationCode($activationCode);
 
         return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu WhatsApp para activar tu cuenta.'], 201);
     }
-
-    private function sendActivationCode( $activationCode)
+    private function sendActivationCode($activationCode)
     {
-        $sid = env('TWILIO_SID'); // Tu Twilio SID
-        $token = env('TWILIO_AUTH_TOKEN'); // Tu Twilio Auth Token
-        $from = "whatsapp:+14155238886"; // Número de Twilio habilitado para WhatsApp
-        $to = "whatsapp:+5218714307468"; // Destino en formato internacional
+        $sid    = env('TWILIO_SID');
+        $token  = env('TWILIO_AUTH_TOKEN');
+        $from   = "whatsapp:+14155238886";
+        $to     = "whatsapp:+5218714307468";
 
         try {
-            // Configurar opciones cURL para ignorar SSL (solo pruebas locales)
             $options = [
                 CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar validación del certificado
                 CURLOPT_SSL_VERIFYHOST => 0,    // No verificar el nombre del host
@@ -81,7 +94,7 @@ class AuthController extends Controller
                 $to,
                 [
                     "from" => $from,
-                    "body" => "Tu código de activación es: ". $activationCode.". Por favor, úsalo para activar tu cuenta. 🚀"
+                    "body" => "Tu código de activación es: " . $activationCode . ". Por favor, úsalo para activar tu cuenta. 🚀"
                 ]
             );
         } catch (\Exception $e) {
@@ -98,34 +111,32 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255',
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'El correo proporcionado no es válido.',
                 'errors' => $validator->errors()
             ], 422);
         }
-    
+
         // Buscar al usuario por correo
         $user = User::where('email', $request->email)->first();
-    
+
         if (!$user) {
             return response()->json(['message' => 'El usuario no existe.'], 404);
         }
-    
+
         // Verificar si el usuario ya está activo
         if ($user->is_active) {
             return response()->json(['message' => 'El usuario ya está activado.'], 400);
         }
-    
+
         // Reenviar el código de activación al teléfono del usuario
-        $this->sendActivationCode($user->phone, $user->activation_token);
-    
+        $this->sendActivationCode($user->activation_token);
+
         return response()->json(['message' => 'El código de activación ha sido reenviado. Revisa tu WhatsApp.'], 200);
     }
-    
-
-    private function sendmessage( $message)
+    private function sendmessage($message)
     {
         $sid = env('TWILIO_SID'); // Tu Twilio SID
         $token = env('TWILIO_AUTH_TOKEN'); // Tu Twilio Auth Token
@@ -182,7 +193,7 @@ class AuthController extends Controller
             ->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Código de activación inválido.'], 400);
+            return response()->json(['message' => 'Credenciales inválidas.'], 400);
         }
 
         // Activar la cuenta
@@ -210,7 +221,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
         }
         // Verificar las que los datos no sean null
-      
+
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {

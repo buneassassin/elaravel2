@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
 
 class AdminController extends Controller
 {
-
     public function index()
     {
         return "admin";
     }
-
     public function activateUser(Request $request){
 
         $validator = Validator::make($request->all(), [
@@ -68,7 +68,6 @@ class AdminController extends Controller
             'message' => 'Rol de usuario actualizado a admin exitosamente.',
         ]);
     }
-    //dar de vaja a un usuario
     public function baja(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -93,5 +92,11 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'Usuario dado de baja exitosamente.',
         ]);
+    }
+    public function jugadoresall()
+    {
+        //bucamos los jugadores con el rol 2
+        $jugadores = DB::table('users')->where('role_id', 2)->get();
+        return response()->json($jugadores);
     }
 }

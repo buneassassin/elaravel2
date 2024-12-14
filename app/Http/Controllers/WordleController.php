@@ -5,12 +5,35 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Juego;
 use App\Models\Attempt;
+use Illuminate\Support\Facades\Http;
 use Twilio\Rest\Client;
 use Twilio\Http\CurlClient;
 use Illuminate\Support\Facades\Validator;
+use App\Jobs\SendGameSummaryToSlack;
+use App\Services\TwilioService;
+use App\Services\WordGeneratorService;
 
 class WordleController extends Controller
 {
+    protected $twilioService;
+    protected $wordGeneratorService;
+
+    public function __construct(TwilioService $twilioService, WordGeneratorService $wordGeneratorService)
+    {
+        $this->twilioService = $twilioService;
+        $this->wordGeneratorService = $wordGeneratorService;
+    }
+    public function sendLetterMessage($message)
+    {
+        $to = "whatsapp:+5218714307468";
+        $result = $this->twilioService->sendMessage($to, $message);
+
+        return response()->json($result);
+    }
+    public function generateRandomWord()
+    {
+        return $this->wordGeneratorService->generateRandomWord();
+    }
     public function createJuego()
     {
         $userId = auth()->user()->id;
@@ -32,7 +55,7 @@ class WordleController extends Controller
 
         // Si no existe un juego activo, permite crear uno nuevo
 
-        $word = $this->generateRandomWord(5);  // Generar palabra aleatoria de 5 caracteres
+        $word = $this->generateRandomWord();
 
         // Crear una nueva partida
         $Juego = Juego::create([
@@ -52,6 +75,20 @@ class WordleController extends Controller
     {
         //validamos si el usario le pertenece el juego
         $userId = auth()->user()->id;
+        // Verificar si el jugador tiene un juego en curso (activo) sin haberlo completado
+        $activeGame = Juego::where('user_id', $userId)
+            ->where('is_completed', false)  // Verifica que el juego no esté completado
+            ->whereNotNull('word')  // Verifica que haya una palabra seleccionada
+            //verefica que haya attempts_used sea > 0
+            ->where('attempts_used', '>', 0)
+            ->first();
+
+        if ($activeGame && $activeGame->id != $id) {
+            return response()->json([
+                'message' => 'Ya tienes un juego en curso. Termina tu juego actual antes de crear uno nuevo.',
+                'juego_id' => $activeGame->id
+            ], 400);
+        }
         $Juego = Juego::where('user_id', $userId)->where('id', $id)->first();
         if (!$Juego) {
             return response()->json(['message' => 'No tienes un juego activo.'], 400);
@@ -64,7 +101,20 @@ class WordleController extends Controller
         if ($validator->fails()) {
             return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
         }
+        // Verificar si el jugador tiene un juego en curso (activo) sin haberlo completado
+        $activeGame = Juego::where('user_id', $userId)
+            ->where('is_completed', false)  // Verifica que el juego no esté completado
+            ->whereNotNull('word')  // Verifica que haya una palabra seleccionada
+            //verefica que haya attempts_used sea > 0
+            ->where('attempts_used', '>', 0)
+            ->first();
 
+        if ($activeGame && $activeGame->id != $id) {
+            return response()->json([
+                'message' => 'Ya tienes un juego en curso. Termina tu juego actual antes de crear uno nuevo.',
+                'juego_id' => $activeGame->id
+            ], 400);
+        }
         $Juego = Juego::findOrFail($id);
 
         // Verificar si la partida ya está terminada
@@ -82,6 +132,7 @@ class WordleController extends Controller
             $Juego->is_won = false;
             $Juego->save();
             $this->sendLetterMessage("Has alcanzado el límite de intentos. La palabra era '{$Juego->word}'.");
+
             return response()->json(['message' => 'Has alcanzado el límite de intentos. La palabra era: ' . $Juego->word], 400);
         }
 
@@ -122,12 +173,19 @@ class WordleController extends Controller
         if ($attempt === $word) {
             $Juego->is_completed = true;
             $Juego->is_won = true;
+            $summaryMessage = "¡Ganaste! La palabra era '{$word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
+            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
+
             $this->sendLetterMessage("¡Ganaste! La palabra era '{$word}'.");
         } elseif ($Juego->attempts_used >= $maxAttempts) {
             $Juego->is_completed = true;
             $Juego->is_won = false;
+            $summaryMessage = "¡Perdiste! La palabra era '{$word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
+            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
+
             $this->sendLetterMessage("¡Perdiste! La palabra era '{$word}'.");
         }
+
 
         $Juego->save();
 
@@ -153,10 +211,10 @@ class WordleController extends Controller
     {
         $maxAttempts = env('MAX_ATTEMPTS', 5);
 
-        // Obtener todos los juegos activos (no completados y con palabra asignada)
+        // Obtener todos los juegos activos (no completados y con palabra asignada) solo del jugador
         $Juego = Juego::where('is_completed', false)
-            ->whereNotNull('word')  // Asegurarse de que el juego tenga una palabra asignada
-            ->get(['id', 'word', 'is_completed', 'is_won']);  // Excluimos 'word' de la respuesta
+            ->where('user_id', auth()->user()->id)
+            ->get();
 
 
         // Si no hay juegos disponibles
@@ -181,8 +239,45 @@ class WordleController extends Controller
             'Juego' => $juegos
         ]);
     }
+    public function abandonJuego($id)
+    {
+        $userId = auth()->user()->id;
+        //validamos si es su juego
+        $Juego = Juego::where('user_id', $userId)->where('id', $id)->first();
+        if (!$Juego) {
+            return response()->json(['message' => 'No tienes un juego activo.'], 400);
+        }
+        $Juego = Juego::findOrFail($id);
+
+        if ($Juego->is_completed) {
+            return response()->json(['message' => 'El juego ya terminó.'], 400);
+        }
+
+        $Juego->is_completed = true;
+        $Juego->is_won = false;
+        $Juego->save();
+        $summaryMessage = "El usuario abandonó el juego.\nLa palabra era '{$Juego->word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
+
+        // Despacha el job para enviar el mensaje por Slack
+        SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
+        return response()->json([
+            'message' => 'Has abandonado el juego. Se ha marcado como perdido.',
+            'Juego' => $Juego
+        ]);
+    }
     public function JuegoStatus($id)
     {
+        // Validar el ID del juego que existe
+        if (!Juego::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Juego no encontrado.'], 404);
+        }
+        // Validar si el juego es del mismo usuario
+        $userId = auth()->user()->id;
+        $Juego = Juego::where('user_id', $userId)->where('id', $id)->first();
+        if (!$Juego) {
+            return response()->json(['message' => 'No tienes un juego activo.'], 400);
+        }
+
         $Juego = Juego::with('attempts')->findOrFail($id); // Carga el juego con los intentos relacionados
 
         $attempts = $Juego->attempts; // Obtener los intentos asociados al juego
@@ -206,27 +301,42 @@ class WordleController extends Controller
             'attempts' => $attemptsReport,
         ]);
     }
-    public function abandonJuego($id)
+    public function userHistory()
     {
+        // Obtener el ID del usuario autenticado
         $userId = auth()->user()->id;
-        //validamos si es su juego
-        $Juego = Juego::where('user_id', $userId)->where('id', $id)->first();
-        if (!$Juego) {
-            return response()->json(['message' => 'No tienes un juego activo.'], 400);
-        }
-        $Juego = Juego::findOrFail($id);
 
-        if ($Juego->is_completed) {
-            return response()->json(['message' => 'El juego ya terminó.'], 400);
+        // Verificar si el usuario está autenticado
+        if (!$userId) {
+            return response()->json(['message' => 'No tienes un juegos jugados.'], 400);
         }
 
-        $Juego->is_completed = true;
-        $Juego->is_won = false;
-        $Juego->save();
+        // Obtener solo los juegos completados del usuario
+        $Juegos = Juego::where('user_id', $userId)
+            ->where('is_completed', true) // Filtrar solo juegos completados
+            ->get();
+
+        // Si no hay juegos en el historial
+        if ($Juegos->isEmpty()) {
+            return response()->json(['message' => 'No se encontraron juegos en el historial.'], 404);
+        }
+
+        // Formatear la respuesta con más detalles de los juegos
+        $JuegosHistory = $Juegos->map(function ($Juego) {
+            return [
+                'juego_id' => $Juego->id,
+                'masked_word' => $Juego->masked_word,  // Solo mostrar la palabra enmascarada
+                'attempts' => $Juego->attempts,
+                'max_attempts' => $Juego->max_attempts,
+                'is_completed' => $Juego->is_completed ? 'Sí' : 'No',
+                'is_won' => $Juego->is_won ? 'Ganado' : 'Perdido',
+                'date' => $Juego->created_at->format('d-m-Y H:i:s'),
+            ];
+        });
 
         return response()->json([
-            'message' => 'Has abandonado el juego. Se ha marcado como perdido.',
-            'Juego' => $Juego
+            'message' => 'Historial de juegos completados del usuario.',
+            'Juegos' => $JuegosHistory
         ]);
     }
     public function adminReport()
@@ -268,160 +378,5 @@ class WordleController extends Controller
             'porcentaje_perdidos' => round($porcentajePerdidos, 2),
             'reporte_detallado' => $reporteDetallado,
         ]);
-    }
-    public function userHistory()
-    {
-        // Obtener el ID del usuario autenticado
-        $userId = auth()->user()->id;
-
-        // Verificar si el usuario está autenticado
-        if (!$userId) {
-            return response()->json(['message' => 'No tienes un juegos jugados.'], 400);
-        }
-
-        // Obtener solo los juegos completados del usuario
-        $Juegos = Juego::where('user_id', $userId)
-            ->where('is_completed', true) // Filtrar solo juegos completados
-            ->get();
-
-        // Si no hay juegos en el historial
-        if ($Juegos->isEmpty()) {
-            return response()->json(['message' => 'No se encontraron juegos en el historial.'], 404);
-        }
-
-        // Formatear la respuesta con más detalles de los juegos
-        $JuegosHistory = $Juegos->map(function ($Juego) {
-            return [
-                'juego_id' => $Juego->id,
-                'masked_word' => $Juego->masked_word,  // Solo mostrar la palabra enmascarada
-                'attempts' => $Juego->attempts,
-                'max_attempts' => $Juego->max_attempts,
-                'is_completed' => $Juego->is_completed ? 'Sí' : 'No',
-                'is_won' => $Juego->is_won ? 'Ganado' : 'Perdido',
-                'date' => $Juego->created_at->format('d-m-Y H:i:s'),
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Historial de juegos completados del usuario.',
-            'Juegos' => $JuegosHistory
-        ]);
-    }
-    public function generateRandomWord($length)
-    {
-        // Array con palabras en español
-        $palabras = [
-            'feliz',
-            'noche',
-            'cielo',
-            'fuego',
-            'valor',
-            'rojo',
-            'verde',
-            'azul',
-            'luna',
-            'risa',
-            'fuerza',
-            'pueblo',
-            'ciudad',
-            'comida',
-            'bebida',
-            'balón',
-            'coche',
-            'camisa',
-            'gato',
-            'perro',
-            'león',
-            'flor',
-            'árbol',
-            'sabio',
-            'tonto',
-            'amigo',
-            'justo',
-            'rico',
-            'nuevo',
-            'viejo',
-            'frío',
-            'cerca',
-            'madre',
-            'padre',
-            'hermano',
-            'hija',
-            'tío',
-            'primo',
-            'dinero',
-            'empresa',
-            'café',
-            'té',
-            'vino',
-            'jugo',
-            'pan',
-            'pollo',
-            'carne',
-            'arroz',
-            'pasta',
-            'sopa',
-            'pizza',
-            'guiso',
-            'frito',
-            'vapor',
-            'dulce',
-            'rico'
-        ];
-
-
-
-        // Generar una palabra aleatoria del array
-        $randomWord = $palabras[array_rand($palabras)];
-
-        // Si la longitud de la palabra generada es menor a la deseada, agregamos letras
-        while (strlen($randomWord) < $length) {
-            $randomWord .= $palabras[array_rand($palabras)];
-        }
-
-        // Recortar la palabra si excede la longitud deseada
-        return substr($randomWord, 0, $length);
-    }
-    public function sendLetterMessage($message)
-    {
-        $sid    = env('TWILIO_SID');
-        $token  = env('TWILIO_AUTH_TOKEN');
-        $from   = "whatsapp:+14155238886";
-        $to     = "whatsapp:+5218714307468";
-
-        try {
-            // Configurar las opciones cURL para ignorar la validación SSL (solo pruebas locales)
-            $options = [
-                CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar validación del certificado
-                CURLOPT_SSL_VERIFYHOST => 0,    // No verificar el nombre del host
-            ];
-            $httpClient = new CurlClient($options);
-
-            // Crear el cliente de Twilio
-            $twilio = new Client($sid, $token);
-
-            // Configurar el cliente HTTP
-            $twilio->setHttpClient($httpClient);
-
-            // Enviar el mensaje
-            $message = $twilio->messages->create(
-                $to,
-                [
-                    "from" => $from,
-                    "body" => "$message"
-                ]
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Mensaje enviado exitosamente',
-                'sid' => $message->sid
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 }

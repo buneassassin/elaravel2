@@ -2,294 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Http;
 use App\Models\Game;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Twilio\Rest\Client;
 use Twilio\Http\CurlClient;
+use App\Jobs\SendGameSummaryToSlack;
+use App\Services\TwilioService;
+use App\Services\WordGeneratorService;
 
 class GameController extends Controller
 {
+    protected $twilioService;
+    protected $wordGeneratorService;
+
+    public function __construct(TwilioService $twilioService, WordGeneratorService $wordGeneratorService)
+    {
+        $this->twilioService = $twilioService;
+        $this->wordGeneratorService = $wordGeneratorService;
+    }
     public function sendLetterMessage($message)
     {
-        $sid    = env('TWILIO_SID');
-        $token  = env('TWILIO_AUTH_TOKEN');
-        $from   = "whatsapp:+14155238886";
-        $to     = "whatsapp:+5218714307468";
+        $to = "whatsapp:+5218714307468";
+        $result = $this->twilioService->sendMessage($to, $message);
 
-        try {
-            // Configurar las opciones cURL para ignorar la validación SSL (solo pruebas locales)
-            $options = [
-                CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar validación del certificado
-                CURLOPT_SSL_VERIFYHOST => 0,    // No verificar el nombre del host
-            ];
-            $httpClient = new CurlClient($options);
-
-            // Crear el cliente de Twilio
-            $twilio = new Client($sid, $token);
-
-            // Configurar el cliente HTTP
-            $twilio->setHttpClient($httpClient);
-
-            // Enviar el mensaje
-            $message = $twilio->messages->create(
-                $to,
-                [
-                    "from" => $from,
-                    "body" => "$message"
-                ]
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Mensaje enviado exitosamente',
-                'sid' => $message->sid
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        return response()->json($result);
     }
-    public function userHistory()
+    public function generateRandomWord()
     {
-        // Obtener el ID del usuario autenticado
-        $userId = auth()->user()->id;
-    
-        // Verificar si el usuario está autenticado
-        if (!$userId) {
-            return response()->json(['message' => 'No tienes un juego activo.'], 400);
-        }
-    
-        // Obtener solo los juegos completados del usuario
-        $games = Game::where('user_id', $userId)
-                     ->where('is_completed', true) // Filtrar solo juegos completados
-                     ->get();
-    
-        // Si no hay juegos en el historial
-        if ($games->isEmpty()) {
-            return response()->json(['message' => 'No se encontraron juegos en el historial.'], 404);
-        }
-    
-        // Formatear la respuesta con más detalles de los juegos
-        $gamesHistory = $games->map(function ($game) {
-            return [
-                'game_id' => $game->id,
-                'masked_word' => $game->masked_word,  // Solo mostrar la palabra enmascarada
-                'attempts' => $game->attempts,
-                'max_attempts' => $game->max_attempts,
-                'is_completed' => $game->is_completed ? 'Sí' : 'No',
-                'is_won' => $game->is_won ? 'Ganado' : 'Perdido',
-                'date' => $game->created_at->format('d-m-Y H:i:s'),
-            ];
-        });
-    
-        return response()->json([
-            'message' => 'Historial de juegos completados del usuario.',
-            'games' => $gamesHistory
-        ]);
-    }
-    public function generateRandomWord($length)
-    {
-        // Array con palabras en español
-        $palabras = [
-            'amor',
-            'feliz',
-            'sol',
-            'noche',
-            'día',
-            'cielo',
-            'agua',
-            'fuego',
-            'tierra',
-            'luz',
-            'viento',
-            'alegría',
-            'trabajo',
-            'familia',
-            'amistad',
-            'música',
-            'paz',
-            'esperanza',
-            'rojo',
-            'verde',
-            'azul',
-            'amarillo',
-            'luna',
-            'estrella',
-            'risa',
-            'tristeza',
-            'fuerza',
-            'valor',
-            'libertad',
-            'coraje',
-            'pueblo',
-            'ciudad',
-            'país',
-            'comida',
-            'bebida',
-            'fútbol',
-            'balón',
-            'coche',
-            'camisa',
-            'zapato',
-            'gato',
-            'perro',
-            'elefante',
-            'león',
-            'tigre',
-            'pájaro',
-            'pez',
-            'flor',
-            'árbol',
-            'montaña',
-            'río',
-            'carrera',
-            'universidad',
-            'escuela',
-            'profesor',
-            'estudiante',
-            'clase',
-            'examen',
-            'sabio',
-            'inteligente',
-            'tonto',
-            'amigo',
-            'enemigo',
-            'profundo',
-            'superficial',
-            'rápido',
-            'lento',
-            'alto',
-            'bajo',
-            'grande',
-            'pequeño',
-            'nuevo',
-            'viejo',
-            'rico',
-            'pobre',
-            'justo',
-            'injusto',
-            'honesto',
-            'mentiroso',
-            'cansado',
-            'fresco',
-            'caliente',
-            'frío',
-            'sucio',
-            'limpio',
-            'oscuro',
-            'claro',
-            'cerca',
-            'lejos',
-            'frente',
-            'detrás',
-            'izquierda',
-            'derecha',
-            'arriba',
-            'abajo',
-            'delante',
-            'detrás',
-            'madre',
-            'padre',
-            'hermano',
-            'hermana',
-            'abuelo',
-            'abuela',
-            'hijo',
-            'hija',
-            'tío',
-            'tía',
-            'primo',
-            'prima',
-            'hijo',
-            'hija',
-            'esposo',
-            'esposa',
-            'trabajo',
-            'dinero',
-            'empresa',
-            'negocio',
-            'café',
-            'té',
-            'cerveza',
-            'vino',
-            'jugo',
-            'comida',
-            'postre',
-            'ensalada',
-            'pan',
-            'fruta',
-            'verdura',
-            'pollo',
-            'carne',
-            'pescado',
-            'arroz',
-            'pasta',
-            'sopa',
-            'hamburguesa',
-            'pizza',
-            'sándwich',
-            'tortilla',
-            'guiso',
-            'asado',
-            'hamburguesa',
-            'frito',
-            'grillado',
-            'vapor',
-            'salado',
-            'dulce',
-            'ácido',
-            'amargo',
-            'suave',
-            'fuerte',
-            'picante',
-            'delicioso',
-            'rico'
-        ];
-
-        // Generar una palabra aleatoria del array
-        $randomWord = $palabras[array_rand($palabras)];
-
-        // Si la longitud de la palabra generada es menor a la deseada, agregamos letras
-        while (strlen($randomWord) < $length) {
-            $randomWord .= $palabras[array_rand($palabras)];
-        }
-
-        // Recortar la palabra si excede la longitud deseada
-        return substr($randomWord, 0, $length);
-    }
-    public function availableGames()
-    {
-        // Obtener todos los juegos activos (no completados y con palabra asignada)
-        $games = Game::where('is_completed', false)
-                     ->whereNotNull('word')  // Asegurarse de que el juego tenga una palabra asignada
-                     ->get(['id', 'masked_word', 'attempts', 'max_attempts', 'is_completed', 'is_won']);  // Excluimos 'word' de la respuesta
-    
-        // Si no hay juegos disponibles
-        if ($games->isEmpty()) {
-            return response()->json([
-                'message' => 'No hay juegos disponibles para jugar en este momento.'
-            ], 404);
-        }
-    
-        // Devolver los juegos disponibles sin mostrar la palabra original
-        return response()->json([
-            'message' => 'Juegos disponibles para jugar.',
-            'games' => $games
-        ]);
+        return $this->wordGeneratorService->generateRandomWord();
     }
     public function createGame()
     {
         $userId = auth()->user()->id;
-    
+
         // Validar si ya tiene un juego activo (con una palabra seleccionada)
         $activeGame = Game::where('user_id', $userId)
-                          ->where('is_completed', false)
-                          ->whereNotNull('attempted_letters')  // Verificamos que ya haya una palabra seleccionada
-                          ->first();
-        
+            ->where('is_completed', false)
+            ->whereNotNull('attempted_letters')  // Verificamos que ya haya una palabra seleccionada
+            ->first();
+
         // Si el juego tiene una palabra seleccionada, no se puede crear otro
         if ($activeGame) {
             return response()->json([
@@ -304,11 +57,11 @@ class GameController extends Controller
                 ]
             ], 400);
         }
-    
+
         // Crear un nuevo juego si no existe ninguno activo
-        $wordLength = rand(5, 10);  // Longitud aleatoria entre 5 y 10
-        $word = $this->generateRandomWord($wordLength);
-    
+        //  $wordLength = rand(5, 10);  // Longitud aleatoria entre 5 y 10
+        $word = $this->generateRandomWord();
+
         // Crear el nuevo juego
         $game = Game::create([
             'user_id' => $userId,
@@ -317,7 +70,7 @@ class GameController extends Controller
             'attempts' => 0,
             'max_attempts' => env('GAME_MAX_ATTEMPTS'),
         ]);
-    
+
         return response()->json([
             'message' => 'Juego creado',
             'game' => [
@@ -332,23 +85,67 @@ class GameController extends Controller
     }
     public function guess(Request $request, $id)
     {
+        // Validar el ID del juego que si existe
+        if (!Game::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Juego no encontrado.'], 404);
+        }
+        
+
+        $game = Game::findOrFail($id);
+        $userId = auth()->user()->id;
+
+        // Validar si ya tiene un juego activo (con una palabra seleccionada)
+        $activeGame = Game::where('user_id', $userId)
+            ->where('is_completed', false)
+            ->whereNotNull('attempted_letters')  // Verificamos que ya haya una palabra seleccionada
+            ->first();
+
+        // Si el juego tiene una palabra seleccionada, no se puede crear otro
+        if ($activeGame && $activeGame->id !== $game->id) {
+            return response()->json([
+                'message' => 'Ya tienes un juego en curso.',
+                'game' => [
+                    'id' => $activeGame->id,
+                    'masked_word' => $activeGame->masked_word,
+                    'attempts' => $activeGame->attempts,
+                    'max_attempts' => $activeGame->max_attempts,
+                    'is_completed' => $activeGame->is_completed,
+                    'is_won' => $activeGame->is_won,
+                ]
+            ], 400);
+        }
+        $Juego = Game::where('user_id', $userId)->where('id', $id)->first();
+        if (!$Juego) {
+            return response()->json(['message' => 'No tienes un juego activo.'], 400);
+        }
+        if ($game->is_completed) {
+            return response()->json(['message' => 'El juego ya terminó.'], 400);
+        }
+
         try {
             $request->validate([
                 'letter' => ['required', 'alpha', 'size:1'], // Validar solo una letra
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'message' => 'Debes enviar una sola letra válida.',
+                'message' => 'Datos inválidos.',
                 'errors' => $e->errors(),
             ], 400);
         }
+        // Verificar si el jugador tiene un juego en curso (activo) sin haberlo completado
+        $activeGame = game::where('user_id', $userId)
+            ->where('is_completed', false)  // Verifica que el juego no esté completado
+            ->whereNotNull('word')  // Verifica que haya una palabra seleccionada
+            //verefica que haya attempts_used sea > 0
+            ->where('attempts', '>', 0)
+            ->first();
 
-        $game = Game::findOrFail($id);
-
-        if ($game->is_completed) {
-            return response()->json(['message' => 'El juego ya terminó.'], 400);
+        if ($activeGame && $activeGame->id != $id) {
+            return response()->json([
+                'message' => 'Ya tienes un juego en curso. Termina tu juego actual antes de crear uno nuevo.',
+                'juego_id' => $activeGame->id
+            ], 400);
         }
-
         // Obtener el número máximo de intentos desde el archivo .env
         $maxAttempts = env('GAME_MAX_ATTEMPTS', 6); // Valor por defecto de 6 si no está en .env
 
@@ -368,7 +165,7 @@ class GameController extends Controller
         $game->attempted_letters = implode(',', $attemptedLetters);
 
         if (strpos($word, $letter) !== false) {
-            $this->sendLetterMessage( "¡Correcto! La letra '{$letter}' está en la palabra.");
+            $this->sendLetterMessage("¡Correcto! La letra '{$letter}' está en la palabra.");
 
             // Actualizar la palabra enmascarada
             for ($i = 0; $i < strlen($word); $i++) {
@@ -382,7 +179,10 @@ class GameController extends Controller
                 $game->is_completed = true;
                 $game->is_won = true;
 
-                $this->sendLetterMessage( "¡Ganaste! La palabra era '{$word}'.");
+                $summaryMessage = "¡Felicidades! Has ganado el juego de adivinar la palabra. La palabra era: {$word}. Letras intentadas: " . implode(', ', $attemptedLetters);
+                SendGameSummaryToSlack::dispatch($game, $summaryMessage);
+
+                $this->sendLetterMessage("¡Ganaste! La palabra era '{$word}'.");
             }
         } else {
             $game->attempts++;
@@ -391,10 +191,13 @@ class GameController extends Controller
                 $game->is_completed = true;
                 $game->is_won = false;
 
-                $this->sendLetterMessage( "¡Perdiste! La palabra era '{$word}'.");
+                $summaryMessage = "¡Lo siento! Has perdido el juego de adivinar la palabra. La palabra era: {$word}. Letras intentadas: " . implode(', ', $attemptedLetters);
+                SendGameSummaryToSlack::dispatch($game, $summaryMessage);
+
+                $this->sendLetterMessage("¡Perdiste! La palabra era {$word}.");
             } else {
                 $remainingAttempts = $maxAttempts - $game->attempts;
-                $this->sendLetterMessage( "La letra '{$letter}' no está en la palabra. Te quedan {$remainingAttempts} intentos.");
+                $this->sendLetterMessage("La letra '{$letter}' no está en la palabra. Te quedan {$remainingAttempts} intentos.");
             }
         }
 
@@ -415,6 +218,26 @@ class GameController extends Controller
             'attempted_letters' => $attemptedLetters,
         ]);
     }
+    public function availableGames()
+    {
+
+        $games = Game::where('is_completed', false)
+            ->whereNotNull('word')
+            ->where('user_id', auth()->user()->id)
+            ->get(['id', 'masked_word', 'attempts', 'max_attempts', 'is_completed', 'is_won']);  // Excluimos 'word' de la respuesta
+
+        if ($games->isEmpty()) {
+            return response()->json([
+                'message' => 'No hay juegos disponibles para jugar en este momento.'
+            ], 404);
+        }
+
+        // Devolver los juegos disponibles sin mostrar la palabra original
+        return response()->json([
+            'message' => 'Juegos disponibles para jugar.',
+            'games' => $games
+        ]);
+    }
     public function abandonGame($id)
     {
         $userId = auth()->user()->id;
@@ -432,28 +255,26 @@ class GameController extends Controller
         $game->is_completed = true;
         $game->is_won = false;
         $game->save();
+        $summaryMessage = "Has abandonado el juego de adivinar la palabra.";
+        SendGameSummaryToSlack::dispatch($game, $summaryMessage);
 
+        $this->sendLetterMessage("Has abandonado el juego.");
         return response()->json([
             'message' => 'Has abandonado el juego. Se ha marcado como perdido.',
             'game' => $game
         ]);
     }
-    public function adminReport()
-    {
-        $games = Game::all();
-        $totalGames = $games->count();
-        $wonGames = $games->where('is_won', true)->count();
-        $lostGames = $games->where('is_won', false)->count();
-
-        return response()->json([
-            'total_games' => $totalGames,
-            'won_games' => $wonGames,
-            'lost_games' => $lostGames,
-        ]);
-    }
     public function status($id)
     {
+        if (!Game::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Juego no encontrado.'], 404);
+        }
         $game = Game::findOrFail($id);
+
+        // Validar si el juego es del mismo usuario
+        if ($game->user_id !== auth()->user()->id) {
+            return response()->json(['message' => 'No tienes acceso a este juego.'], 403);
+        }
 
         // Calcular letras intentadas
         $attemptedLetters = $game->attempted_letters ? explode(',', $game->attempted_letters) : [];
@@ -473,5 +294,56 @@ class GameController extends Controller
         ];
 
         return response()->json($response);
+    }
+    public function userHistory()
+    {
+        // Obtener el ID del usuario autenticado
+        $userId = auth()->user()->id;
+
+        // Verificar si el usuario está autenticado
+        if (!$userId) {
+            return response()->json(['message' => 'No tienes un juego activo.'], 400);
+        }
+
+        // Obtener solo los juegos completados del usuario
+        $games = Game::where('user_id', $userId)
+            ->where('is_completed', true) // Filtrar solo juegos completados
+            ->get();
+
+        // Si no hay juegos en el historial
+        if ($games->isEmpty()) {
+            return response()->json(['message' => 'No se encontraron juegos en el historial.'], 404);
+        }
+
+        // Formatear la respuesta con más detalles de los juegos
+        $gamesHistory = $games->map(function ($game) {
+            return [
+                'game_id' => $game->id,
+                'masked_word' => $game->masked_word,  // Solo mostrar la palabra enmascarada
+                'attempts' => $game->attempts,
+                'max_attempts' => $game->max_attempts,
+                'is_completed' => $game->is_completed ? 'Sí' : 'No',
+                'is_won' => $game->is_won ? 'Ganado' : 'Perdido',
+                'date' => $game->created_at->format('d-m-Y H:i:s'),
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Historial de juegos completados del usuario.',
+            'games' => $gamesHistory
+        ]);
+    }
+    public function adminReport()
+    {
+        $games = Game::all();
+        $totalGames = $games->count();
+        $wonGames = $games->where('is_won', true)->count();
+        $lostGames = $games->where('is_won', false)->count();
+
+        return response()->json([
+            'total_games' => $totalGames,
+            'won_games' => $wonGames,
+            'lost_games' => $lostGames,
+        ]);
     }
 }
