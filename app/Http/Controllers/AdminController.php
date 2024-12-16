@@ -95,8 +95,27 @@ class AdminController extends Controller
     }
     public function jugadoresall()
     {
-        //bucamos los jugadores con el rol 2
-        $jugadores = DB::table('users')->where('role_id', 2)->get();
-        return response()->json($jugadores);
+        //damos un reporte completo de caada jugador
+        //tremos a otos usarios con id ==2 o id ==3
+        $user=User::where('role_id', '!=', 1)->get();
+        
+        $totaluser = $user->count();
+
+        $jugadores = $user->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role_id == 3 ? 'admin' : 'jugador',
+                'created_at' => $user->created_at->toDateTimeString(),
+                'updated_at' => $user->updated_at->toDateTimeString(),
+            ];
+        });
+       
+
+        return response()->json([
+            'totaljugadores' => $totaluser,
+            'jugadores' => $jugadores,
+        ]);
     }
 }

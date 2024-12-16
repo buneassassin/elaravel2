@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('attempts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('game_id')->constrained('juegos')->onDelete('cascade'); // Relación con la tabla games
-            $table->string('word_attempted', 5); // Palabra intentada, de 5 caracteres
+            $table->string('word_attempted' , 20); // Palabra intentada, de 5 caracteres
             $table->json('feedback'); // Feedback del intento (correcta, incorrecta, mal ubicada)
             $table->timestamps();
         });

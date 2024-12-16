@@ -9,7 +9,7 @@ class WordGeneratorService
     public function generateRandomWord()
     {
         // Seleccionar aleatoriamente una longitud de palabra entre 4, 5 y 6
-        $lengthOptions = [4, 5];
+        $lengthOptions = [4, 5, 6];
         $randomLength = $lengthOptions[array_rand($lengthOptions)];
 
         // Construir la URL con el parámetro de longitud aleatoria

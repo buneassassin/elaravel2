@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Juego;
 use App\Models\Attempt;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Twilio\Rest\Client;
 use Twilio\Http\CurlClient;
@@ -99,8 +100,10 @@ class WordleController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
+            return response()->json(['message' => 'La palabra debe tener exactamente 5 letras.', 'errors' => $validator->errors()], 400);
         }
+
+
         // Verificar si el jugador tiene un juego en curso (activo) sin haberlo completado
         $activeGame = Juego::where('user_id', $userId)
             ->where('is_completed', false)  // Verifica que el juego no esté completado
@@ -173,18 +176,45 @@ class WordleController extends Controller
         if ($attempt === $word) {
             $Juego->is_completed = true;
             $Juego->is_won = true;
-            $summaryMessage = "¡Ganaste! La palabra era '{$word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
-            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
 
+            // Formatear intentos para el usuario
+            $attemptsArray = json_decode($Juego->attempts, true);
+            $formattedAttempts = array_map(function ($attempt) {
+                $feedbackArray = json_decode($attempt['feedback'], true);
+                $feedbackString = implode(", ", array_map(function ($feedback) {
+                    return "{$feedback['letter']} ({$feedback['status']})";
+                }, $feedbackArray));
+                return "{$attempt['word_attempted']} => $feedbackString";
+            }, $attemptsArray);
+
+            $summaryMessage = "¡Ganaste! La palabra era '{$word}'.\n";
+            $summaryMessage .= "Intentos utilizados: {$Juego->attempts_used}\n";
+            $summaryMessage .= "Palabras intentadas:\n" . implode("\n", $formattedAttempts);
+
+            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
             $this->sendLetterMessage("¡Ganaste! La palabra era '{$word}'.");
         } elseif ($Juego->attempts_used >= $maxAttempts) {
             $Juego->is_completed = true;
             $Juego->is_won = false;
-            $summaryMessage = "¡Perdiste! La palabra era '{$word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
-            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
 
+            // Formatear intentos para el usuario
+            $attemptsArray = json_decode($Juego->attempts, true);
+            $formattedAttempts = array_map(function ($attempt) {
+                $feedbackArray = json_decode($attempt['feedback'], true);
+                $feedbackString = implode(", ", array_map(function ($feedback) {
+                    return "{$feedback['letter']} ({$feedback['status']})";
+                }, $feedbackArray));
+                return "{$attempt['word_attempted']} => $feedbackString";
+            }, $attemptsArray);
+
+            $summaryMessage = "¡Perdiste! La palabra era '{$word}'.\n";
+            $summaryMessage .= "Intentos utilizados: {$Juego->attempts_used}\n";
+            $summaryMessage .= "Palabras intentadas:\n" . implode("\n", $formattedAttempts);
+
+            SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
             $this->sendLetterMessage("¡Perdiste! La palabra era '{$word}'.");
         }
+
 
 
         $Juego->save();
@@ -196,8 +226,13 @@ class WordleController extends Controller
             'feedback' => json_encode($feedback), // Guardar el feedback como JSON
         ]);
 
-        // Enviar el mensaje con un estado más comprensible
-        $this->sendLetterMessage("Intento realizado: '{$attempt}'. " . $feedbackMessage . ". Te quedan {$attemptsRemaining} intentos.");
+
+        $formattedFeedback = implode("\n", array_map(function ($item) {
+            return "→ {$item['letter']} ({$item['status']})"; // Agregar flechas y formato por línea
+        }, $feedback));
+
+        // Enviar el mensaje con feedback detallado y mejor formato
+        $this->sendLetterMessage("Intento realizado: '{$attempt}'.\nFeedback:\n{$formattedFeedback}\nTe quedan {$attemptsRemaining} intentos.");
 
         return response()->json([
             'message' => $Juego->is_completed
@@ -242,29 +277,49 @@ class WordleController extends Controller
     public function abandonJuego($id)
     {
         $userId = auth()->user()->id;
-        //validamos si es su juego
+
+        // Validar si el juego pertenece al usuario
         $Juego = Juego::where('user_id', $userId)->where('id', $id)->first();
         if (!$Juego) {
             return response()->json(['message' => 'No tienes un juego activo.'], 400);
         }
-        $Juego = Juego::findOrFail($id);
 
         if ($Juego->is_completed) {
             return response()->json(['message' => 'El juego ya terminó.'], 400);
         }
 
+        // Marcar el juego como abandonado
         $Juego->is_completed = true;
         $Juego->is_won = false;
         $Juego->save();
-        $summaryMessage = "El usuario abandonó el juego.\nLa palabra era '{$Juego->word}'.\nIntentos utilizados: {$Juego->attempts_used}\nPalabras intentadas: " . json_encode($Juego->attempts);
 
-        // Despacha el job para enviar el mensaje por Slack
+        // Formatear intentos para un resumen claro
+        $attemptsArray = json_decode($Juego->attempts, true);
+        $formattedAttempts = array_map(function ($attempt) {
+            $feedbackArray = json_decode($attempt['feedback'], true);
+            $feedbackString = implode("\n", array_map(function ($feedback) {
+                return "→ {$feedback['letter']} ({$feedback['status']})";
+            }, $feedbackArray));
+            return "{$attempt['word_attempted']}:\n$feedbackString";
+        }, $attemptsArray);
+
+        // Crear mensaje de resumen
+        $summaryMessage = "El usuario abandonó el juego.\n";
+        $summaryMessage .= "La palabra era '{$Juego->word}'.\n";
+        $summaryMessage .= "Intentos utilizados: {$Juego->attempts_used}\n";
+        $summaryMessage .= "Palabras intentadas:\n" . implode("\n\n", $formattedAttempts);
+
+        // Despachar el mensaje a Slack
         SendGameSummaryToSlack::dispatch($Juego, $summaryMessage);
+
+        // Respuesta al cliente
         return response()->json([
             'message' => 'Has abandonado el juego. Se ha marcado como perdido.',
+            'summary' => $summaryMessage,
             'Juego' => $Juego
         ]);
     }
+
     public function JuegoStatus($id)
     {
         // Validar el ID del juego que existe
@@ -325,7 +380,7 @@ class WordleController extends Controller
         $JuegosHistory = $Juegos->map(function ($Juego) {
             return [
                 'juego_id' => $Juego->id,
-                'masked_word' => $Juego->masked_word,  // Solo mostrar la palabra enmascarada
+                'original_word' => $Juego->word,  // Solo mostrar la palabra enmascarada
                 'attempts' => $Juego->attempts,
                 'max_attempts' => $Juego->max_attempts,
                 'is_completed' => $Juego->is_completed ? 'Sí' : 'No',
@@ -354,12 +409,14 @@ class WordleController extends Controller
         $porcentajeGanados = $totalJuegos > 0 ? ($wonJuegos / $totalJuegos) * 100 : 0;
         $porcentajePerdidos = $totalJuegos > 0 ? ($lostJuegos / $totalJuegos) * 100 : 0;
 
+
         // Informe detallado de cada juego
         $reporteDetallado = $Juegos->map(function ($Juego) {
+            $user = User::find($Juego->user_id);
             return [
+                'usuario' => $user->name,
                 'id' => $Juego->id,
-                'usuario_id' => $Juego->user_id,
-                'palabra' => $Juego->is_completed ? $Juego->word : 'No revelada',
+                'palabra' => $Juego->word,
                 'intentos_usados' => $Juego->attempts_used,
                 'intentos_restantes' => env('MAX_ATTEMPTS', 5) - $Juego->attempts_used,
                 'estado' => $Juego->is_completed

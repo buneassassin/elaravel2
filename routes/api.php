@@ -36,7 +36,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
     Route::post('/v1/activacion', [AdminController::class, 'activateUser']);
     Route::post('/v1/baja', [AdminController::class, 'baja']);
-    
+
     Route::get('/v1/admin', [AdminController::class, 'index']);
     Route::put('/v1/admin', [AdminController::class, 'update']);
     /*
@@ -60,7 +60,7 @@ Route::post('/v1/renviar', [AuthController::class, 'resendActivationCode'])->nam
 
 Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
     //////////////////////////////////////////////////////////////////////////////
-    Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
+    //Route::get('/send-test-message', [GameController::class, 'sendTestMessage']);
     //////////////////////////////////////////////////////////////////////////////
     // Ahorcado
     Route::post('/v1/juego1', [GameController::class, 'createGame']);

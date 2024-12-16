@@ -320,6 +320,7 @@ class GameController extends Controller
             return [
                 'game_id' => $game->id,
                 'masked_word' => $game->masked_word,  // Solo mostrar la palabra enmascarada
+                'original_word' => $game->word,  // Solo mostrar la palabra enmascarada
                 'attempts' => $game->attempts,
                 'max_attempts' => $game->max_attempts,
                 'is_completed' => $game->is_completed ? 'Sí' : 'No',
@@ -339,11 +340,26 @@ class GameController extends Controller
         $totalGames = $games->count();
         $wonGames = $games->where('is_won', true)->count();
         $lostGames = $games->where('is_won', false)->count();
+        //sacamos el nombre de usuario a quien pertece el juego
+        
+        $reportedetallado = $games->map(function ($game) {
+            return [
+                'Usuario' => $game->user_id ? $game->user->name : 'Desconocido',
+                'id' => $game->id,
+                'palabra' => $game->word,
+                'intentos_usados' => $game->attempts,
+                'intentos_restantes' => env('MAX_ATTEMPTS', 5) - $game->attempts,
+                'estado' => $game->is_completed
+                    ? ($game->is_won ? 'Ganado' : 'Perdido')
+                    : 'En progreso',
+            ];
+        });
 
         return response()->json([
             'total_games' => $totalGames,
             'won_games' => $wonGames,
             'lost_games' => $lostGames,
+            'report' => $reportedetallado
         ]);
     }
 }
