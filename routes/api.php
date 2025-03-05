@@ -27,7 +27,9 @@ Route::get('/hello', function () {
 });
 
 // rutas que solo puedes acceder si eres admin }
-Route::middleware(['checkadmin', 'auth:sanctum'])->group(function () {
+Route::middleware([ 'auth:sanctum','checkadmin',])->group(function () {
+    Route::get('/v1/isAdmin', [AdminController::class, 'isAdmin']);
+    Route::get('/v1/users', [AdminController::class, 'getUsers']);
     Route::post('/v1/activate', [AdminController::class, 'activateUser']);
     Route::get('/v1/admin', [AdminController::class, 'index']);
     Route::put('/v1/admin', [AdminController::class, 'update']);
@@ -43,6 +45,9 @@ Route::post('/v1/renviar', [AuthController::class, 'resendActivationLink'])->nam
 
 Route::post('/v1/register', [AuthController::class, 'register_sanctum'])->name('register');
 Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login')->middleware(['checkinactive']);
+Route::get('/v1/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+Route::post('/v1/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
 
 Route::post('/v1/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
 Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');

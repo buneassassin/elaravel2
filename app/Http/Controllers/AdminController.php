@@ -13,8 +13,30 @@ class AdminController extends Controller
     {
         return "admin";
     }
+    //isAdmin
+    public function isAdmin()
+    {
+        $user = auth()->user();
+        if ($user->role_id == 3) {
+            return response()->json(['success' => true, 'message' => 'El usuario es admin.'], 200);
+        }
+        return response()->json(['message' => 'El usuario no es admin.'], 403);
+    }
+    public function getUsers()
+    {
+        $users = User::where('role_id', 2)->get();
+        $guest = User::where('role_id',1)->get();
+        $admin = User::where('role_id', 3)->get();
+        return response()->json([
+            'message' => 'Usuarios obtenidos correctamente.',
+            'guest' => $guest,
+            'users' => $users,
+            'admin' => $admin,
+        ], 200);
+    }
 
-    public function activateUser(Request $request){
+    public function activateUser(Request $request)
+    {
 
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255',
@@ -41,7 +63,6 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'Rol a usuario actualizado.',
         ]);
-
     }
     public function update(Request $request)
     {
@@ -87,7 +108,7 @@ class AdminController extends Controller
         if ($user->role_id == 3) {
             return response()->json(['message' => 'El usuario es admin.'], 400);
         }
-        $user->is_Inactive=false;
+        $user->is_Inactive = false;
         $user->save();
 
         return response()->json([

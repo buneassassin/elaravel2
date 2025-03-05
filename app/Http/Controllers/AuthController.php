@@ -42,14 +42,14 @@ class AuthController extends Controller
             'role_id' => 1,
             'is_active' => false,
             'is_inactive' => true,
-            'profile_picture' => null,
+            'profile_picture' => "https://ui-avatars.com/api/?name=" . urlencode($request->name) . "&color=7F9CF5&background=EBF4FF",
             'activation_token' => null
         ]);
 
         $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(1), ['user' => $user->id]);
         Mail::to($request->email)->send(new AccountActivationMail($activationLink));
 
-        return response()->json(['message' => 'Usuario registrado. Por favor, revisa tu correo para activar la cuenta.'], 201);
+        return response()->json(['success' => true, 'message' => 'Usuario registrado. Por favor, revisa tu correo para activar la cuenta.'], 201);
     }
 
     public function login_sanctum(Request $request)
@@ -77,6 +77,16 @@ class AuthController extends Controller
 
         return response()->json(['user' => $user, 'token' => $token], 201);
     }
+    public function me()
+    {
+        return response()->json(['success' => true, 'user' => auth()->user()]);
+    }
+    public function logout(Request $request)
+    {
+        $request->user()->tokens()->delete();
+
+        return response()->json(['message' => 'Saliendo...'], 200);
+    }
 
     public function activateAccount(Request $request)
     {
@@ -93,6 +103,7 @@ class AuthController extends Controller
         }
 
         $user->is_active = true;
+        $user->role_id = 2;
         $user->save();
 
         return response()->json(['message' => 'La cuenta ha sido activada.'], 200);
