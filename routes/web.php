@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Procesar el código ingresado
+// routes/web.php
+
+Route::get('/activate', [AuthController::class, 'showActivationForm'])->name('user.activate.form');
+
+

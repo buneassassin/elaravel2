@@ -53,6 +53,39 @@ class LibroController extends Controller
 
         ]);
     }
+    public function index2()
+    {
+        // Verificar si hay libros
+        if (!Libro::exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay libros en la base de datos',
+            ], 404);
+        }
+
+        // Obtener libros con relaciones y paginación
+        $libros = Libro::with([
+            'autor',
+            'publicaciones.editorial',
+            'resenas.lector',
+            'inventarios.libreria'
+        ])->paginate(10); // Cambia 10 por el número de elementos por página
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lista de libros paginada',
+            'data' => $libros->items(), // Solo los libros de la página actual
+            'pagination' => [
+                'current_page' => $libros->currentPage(),
+                'total' => $libros->total(),
+                'per_page' => $libros->perPage(),
+                'last_page' => $libros->lastPage(),
+                'next_page_url' => $libros->nextPageUrl(),
+                'prev_page_url' => $libros->previousPageUrl()
+            ]
+        ]);
+    }
+
     // Almacenar un nuevo libro 
     public function store(Request $request)
     {
@@ -144,9 +177,7 @@ class LibroController extends Controller
         // Continuar con la lógica normal si el libro existe
         $validator = Validator::make($request->all(), [
             'titulo' => 'required|string|max:255',
-            'genero' => 'required|string|max:255',
-            'nombre' => 'required|string|max:255',
-            'nacionalidad' => 'required|string|max:255',
+            'genero' => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -163,21 +194,11 @@ class LibroController extends Controller
             'genero' => $request->input('genero'),
         ]);
 
-        // Actualizar el autor relacionado
-        $autor = Autor::find($libro->autor_id);
-        if ($autor) {
-            $autor->update([
-                'nombre' => $request->input('nombre'),
-                'nacionalidad' => $request->input('nacionalidad'),
-            ]);
-        }
-
         // Respuesta de éxito
         return response()->json([
             'success' => true,
-            'message' => 'Libro y autor actualizados correctamente.',
+            'message' => 'Libro actualizados correctamente.',
             'libro' => $libro,
-            'autor' => $autor,
         ], 200);
     }
 
@@ -186,14 +207,14 @@ class LibroController extends Controller
     {
         // Cargar el libro con las relaciones necesarias
         $libro = Libro::with(['resenas', 'publicaciones', 'inventarios', 'autor'])->find($id);
-    
+
         if (!$libro) {
             return response()->json([
                 'success' => false,
                 'message' => 'Libro no encontrado'
             ], 404);
         }
-    
+
         try {
             // Eliminar las reseñas relacionadas
             $libro->resenas()->delete();
@@ -201,16 +222,15 @@ class LibroController extends Controller
             $libro->publicaciones()->delete();
             // Eliminar los inventarios relacionados
             $libro->inventarios()->delete();
-    
+
             // Ahora eliminar el libro
             $libro->delete();
-    
+
             // Respuesta con código 200 para incluir un mensaje JSON
             return response()->json([
                 'success' => true,
                 'message' => 'Libro eliminado exitosamente'
             ], 200);
-    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -219,7 +239,7 @@ class LibroController extends Controller
             ], 500);
         }
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////
     public function indexAutor()
     {
@@ -268,7 +288,7 @@ class LibroController extends Controller
         Autor::destroy($id);
         return response()->json([
             'message' => 'Autor eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexEditorials()
@@ -316,7 +336,7 @@ class LibroController extends Controller
         Editorial::destroy($id);
         return response()->json([
             'message' => 'Editorial eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexEntos_literarios()
@@ -366,7 +386,7 @@ class LibroController extends Controller
         Eventoliterario::destroy($id);
         return response()->json([
             'message' => 'Entos_literarios eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexLectores()
@@ -375,6 +395,23 @@ class LibroController extends Controller
         $Lectores = Lector::all();
         return response()->json([
             'Lectores' => $Lectores,
+        ]);
+    }
+    public function indexLectores2()
+    {
+        //asemos la paginacion a la consulta
+        $Lectores = Lector::paginate(10);
+        return response()->json([
+            'success' => true,
+            'message' => 'Lista de lectores paginada',
+            'data' => $Lectores->items(),
+            'pagination' => [
+                'current_page' => $Lectores->currentPage(),
+                'total' => $Lectores->total(),
+                'per_page' => $Lectores->perPage(),
+                'last_page' => $Lectores->lastPage(),
+            ],
+
         ]);
     }
     public function storeLectores(Request $request)
@@ -411,7 +448,7 @@ class LibroController extends Controller
         Lector::destroy($id);
         return response()->json([
             'message' => 'Lector eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexLibrerías()
@@ -421,11 +458,40 @@ class LibroController extends Controller
             'Librerias' => $Librerias,
         ]);
     }
+    public function indexLibrerías2()
+    {
+        //asemos la paginacion a la consulta
+        $Librerias = Libreria::paginate(10);
+        return response()->json([
+            'success' => true,
+            'message' => 'Lista de Librerias paginada',
+            'data' => $Librerias->items(),
+            'pagination' => [
+                'current_page' => $Librerias->currentPage(),
+                'total' => $Librerias->total(),
+                'per_page' => $Librerias->perPage(),
+                'last_page' => $Librerias->lastPage(),
+            ]
+        ]);
+    }
     public function storeLibrerías(Request $request)
     {
+        //validar los datos
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:255',
+            'ubicacion' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
         $Libreria = Libreria::create([
             'nombre' => $request->input('nombre'),
-            'ubucacion' => $request->input('ubucacion'),
+            'ubicacion' => $request->input('ubicacion'),
         ]);
         return response()->json([
             'Libreria' => $Libreria,
@@ -438,12 +504,36 @@ class LibroController extends Controller
             'Libreria' => $Libreria,
         ]);
     }
-    public function updateLibrerías(Request $request, Libreria $libreria)
+    public function updateLibrerías(Request $request, $id)
     {
+        //validar los datos
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:255',
+            'ubicacion' => 'required|string|max:255',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        //buscar la libreria
+        $libreria = Libreria::find($id);
+
+        if (!$libreria) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Libreria no encontrada',
+            ], 404);
+        }
+
+        //actualizar la libreria
         $libreria->update([
             'nombre' => $request->input('nombre'),
-            'ubucacion' => $request->input('ubucacion'),
+            'ubicacion' => $request->input('ubicacion'),
         ]);
         return response()->json([
             'Libreria' => $libreria,
@@ -451,31 +541,61 @@ class LibroController extends Controller
     }
     public function destroyLibrerías($id)
     {
-
+        //eliminamos todo el inventario de la libreria
+        Inventario::where('libreria_id', $id)->delete();
         Libreria::destroy($id);
         return response()->json([
+            'success' => true,
             'message' => 'Librería eliminado exitosamente',
-        ], 204);
+            'data' => null
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexParticipacion_evento()
     {
-
-
-
         $ParticipacionEvento = ParticipacionEvento::with(['autor', 'evento'])->get();
         return response()->json([
             'ParticipacionEvento' => $ParticipacionEvento,
         ]);
     }
+    public function indexParticipacion_evento2()
+    {
+        //asemos la paginacion a la consulta
+        $ParticipacionEvento = ParticipacionEvento::with(['evento', 'autor'])->paginate(10);
+        return response()->json([
+            'success' => true,
+            'message' => 'Lista de ParticipacionEvento paginada',
+            'data' => $ParticipacionEvento->items(),
+            'pagination' => [
+                'current_page' => $ParticipacionEvento->currentPage(),
+                'total' => $ParticipacionEvento->total(),
+                'per_page' => $ParticipacionEvento->perPage(),
+                'last_page' => $ParticipacionEvento->lastPage(),
+            ]
+        ]);
+    }
     public function storeParticipacion_evento(Request $request)
     {
+        //validar los datos
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:255',
+            'ubicacion' => 'required|string|max:255',
+            'nacionalidad' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors(),
+            ]);
+        }
         $faker = Faker::create();
 
         // Crear el un evento
         $Evento = EventoLiterario::create([
             'nombre' => $request->input('nombre'),
-            'fecha' => $request->input('fecha'),
+            'fecha' => $request->input('fecha') ?? date('Y-m-d'),
             'ubicacion' => $request->input('ubicacion'),
         ]);
         // Crear el autor
@@ -502,6 +622,19 @@ class LibroController extends Controller
     }
     public function updateParticipacion_evento(Request $request, ParticipacionEvento $participacionEvento)
     {
+        //validar los datos
+        $validator = Validator::make($request->all(), [
+            'autor_id' => 'required|exists:autors,id',
+            'evento_id' => 'required|exists:eventos_literarios,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         $participacionEvento->update([
             'autor_id' => $request->input('autor_id'),
@@ -517,7 +650,7 @@ class LibroController extends Controller
         ParticipacionEvento::destroy($id);
         return response()->json([
             'message' => 'Participacion_evento eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexPrestamos()
@@ -581,7 +714,7 @@ class LibroController extends Controller
         Prestamo::destroy($id);
         return response()->json([
             'message' => 'Prestamo eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexPublicaciones()
@@ -592,7 +725,6 @@ class LibroController extends Controller
             'publicaciones' => $publicaciones,
         ]);
     }
-
     public function storePublicaciones(Request $request)
     {
 
@@ -636,7 +768,7 @@ class LibroController extends Controller
         Publicacion::destroy($id);
         return response()->json([
             'message' => 'Publicaciones eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
     public function indexResena()
@@ -648,12 +780,41 @@ class LibroController extends Controller
             'resena' => $resena,
         ]);
     }
-    public function storeResena(Request $request)
+    public function indexResenas2()
     {
 
+        $resena = Resena::with([])->paginate(10);
+        return response()->json([
+            'success' => true,
+            'resena' => $resena->items(),
+            'pagination' => [
+                'current_page' => $resena->currentPage(),
+                'total' => $resena->total(),
+                'per_page' => $resena->perPage(),
+                'last_page' => $resena->lastPage(),
+            ],
+        ]);
+    }
+    public function storeResena(Request $request)
+    {
+        //validaciones
+        $validator = Validator::make($request->all(), [
+            'calificacion' => 'required|integer|min:1|max:5',
+            'comentario' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+
         $resena = Resena::create([
+            'lector_id' => 2,
+            'libro_id' => 8,
             'calificacion' => $request->input('calificacion'),
-            'comentario' => $request->input('comentarios'),
+            'comentario' => $request->input('comentario'),
         ]);
 
 
@@ -663,7 +824,6 @@ class LibroController extends Controller
     }
     public function showResena($id)
     {
-
         $resena = Resena::find($id);
         return response()->json([
             'resena' => $resena,
@@ -671,11 +831,20 @@ class LibroController extends Controller
     }
     public function updateResena(Request $request,  Resena $resena)
     {
+        //validaciones
+        $validator = Validator::make($request->all(), [
+            'calificacion' => 'required|integer|min:1|max:5',
+            'comentario' => 'required|string|max:255',
+        ]);
 
-
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
         $resena->update([
             'calificacion' => $request->input('calificacion'),
-            'comentario' => $request->input('comentarios'),
+            'comentario' => $request->input('comentario'),
 
         ]);
         return response()->json([
@@ -687,7 +856,7 @@ class LibroController extends Controller
         Resena::destroy($id);
         return response()->json([
             'message' => 'Resena eliminado exitosamente',
-        ], 204);
+        ], 200);
     }
     ///////////////////////////////////////////////////////////////////////////////
 

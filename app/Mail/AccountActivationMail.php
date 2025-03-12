@@ -14,22 +14,22 @@ class AccountActivationMail extends Mailable
     use Queueable, SerializesModels;
 
     private $activationLink;
+    private $activationCode;
 
-    /**
-     * Create a new message instance.
-     *
-     * @param string $activationLink
-     * @return void
-     */
-    public function __construct(string $activationLink)
+    public function __construct(string $activationLink, string $activationCode)
     {
         $this->activationLink = $activationLink;
+        $this->activationCode = $activationCode;
     }
+
     public function build()
     {
-        return $this->from('no-reply@example.com', 'Example App') // Configura el remitente aquí
+        return $this->from('no-reply@example.com', 'Example App')
                     ->view('emails.activate_account')
-                    ->with('activationLink', $this->activationLink);
+                    ->with([
+                        'activationLink' => $this->activationLink,
+                        'activationCode' => $this->activationCode,
+                    ]);
     }
     /**
      * Get the message envelope.
