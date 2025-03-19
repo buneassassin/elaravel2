@@ -9,6 +9,7 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\Juego;
+use App\Http\Controllers\LogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +40,11 @@ Route::middleware(['auth:sanctum', 'checkadmin',])->group(function () {
     Route::post('v1/activarUsuario', [AdminController::class, 'activarUsuario']);
     Route::get('/v1/gamesview', [juego::class, 'listGames']);
     Route::get('/v1/gamesview/{id}', [juego::class, 'showGame'])
+        ->where('id', '[0-9]+');
+        
+    Route::get('/v1/logs', [LogController::class, 'obtenerLogs']);
+    Route::get('/v1/logs2', [LogController::class, 'obtenerLogs2']);
+    Route::get('/v1/logs/{id}', [LogController::class, 'show'])
         ->where('id', '[0-9]+');
 });
 

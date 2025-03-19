@@ -42,7 +42,6 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
-
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
@@ -90,6 +89,28 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
         ],
+        //no es necesario si ya lo tienes en el env,
+        //dificulta que otros podamos ejectuarlo (sobreescribe nuestro env)
+        //no lo borré por si acaso pero de preferencia no lo vuelvas a poner
+        /*
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'host'     => env('DB_HOST_MONGO', '100.26.97.170'),
+            'port'     => env('DB_PORT_MONGO', 27017),
+            'database' => env('DB_DATABASE_MONGO', 'Monguillodb'),
+            'username' => env('DB_USERNAME_MONGO', ''),
+            'password' => env('DB_PASSWORD_MONGO', ''),
+            'dsn' => env('DB_URI'),
+            'options' => [
+                'tlsAllowInvalidCertificates' => true, // Be cautious with this in production
+            ]
+        ],*/
+        'mongodb' => [
+            'driver'   => 'mongodb',
+            'dsn'      => env('DB_URI'),
+            'database' => env('MONGO_DB_DATABASE', 'Laravel'),
+        ],
+
 
     ],
 
@@ -123,7 +144,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_database_'),
         ],
 
         'default' => [

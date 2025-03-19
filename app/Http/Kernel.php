@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\RegistrarActividad::class
         ],
     ];
 
@@ -66,7 +67,9 @@ class Kernel extends HttpKernel
         'checkadmin' => \App\Http\Middleware\CheckAdmin::class,
         'checkactive' => \App\Http\Middleware\CheckActive::class,
         'checkinactive' => \App\Http\Middleware\CheckInActive::class,
-        'checkrole' => \App\Http\Middleware\CheckUserRole::class
+        'checkrole' => \App\Http\Middleware\CheckUserRole::class,
+        'MongoLong' => \App\Http\Middleware\RegistrarActividad::class,
+
         
     ];
 }

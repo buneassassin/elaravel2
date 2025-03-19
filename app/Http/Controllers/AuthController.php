@@ -28,16 +28,13 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Verificar si el correo ya está registrado
         $user = User::where('email', $request->email)->first();
         if ($user) {
             return response()->json(['message' => 'El usuario ya existe.'], 400);
         }
 
-        // Generar un código de activación único (por ejemplo, 6 dígitos)
         $activationCode = rand(100000, 999999);
 
-        // Crear el usuario con el código de activación
         $user = User::create([
             'name'              => $request->name,
             'email'             => $request->email,
@@ -49,12 +46,7 @@ class AuthController extends Controller
             'activation_token'  => $activationCode,
         ]);
 
-        // Generar un enlace fijo a la interfaz de activación la ruta de web.php user.activate.form
         $activationLink = URL::temporarySignedRoute('user.activate.form', now()->addMinutes(10), ['user' => $user->id]);
-        
-        
-
-        // Enviar el correo con el enlace y el código de activación
         Mail::to($request->email)->send(new AccountActivationMail($activationLink, $activationCode));
 
         return response()->json([
@@ -62,8 +54,6 @@ class AuthController extends Controller
             'message' => 'Usuario registrado. Por favor, revisa tu correo para activar la cuenta.'
         ], 201);
     }
-
-
     public function login_sanctum(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -150,37 +140,74 @@ class AuthController extends Controller
     {
         return view('auth.activate');
     }
-    public function activateAccount2(Request $request)
+    public function activateAccount22(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'activation_code' => 'required|string',
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Los datos proporcionados son inválidos.',
                 'errors' => $validator->errors()
             ], 422);
         }
-    
+
         // Buscar al usuario por el código de activación
         $user = User::where('activation_token', $request->activation_code)->first();
-    
+
         if (!$user) {
             return response()->json(['message' => 'El código de activación es incorrecto.'], 404);
         }
-    
+
         if ($user->is_active) {
             return response()->json(['message' => 'La cuenta ya está activada.'], 400);
         }
-    
+
         // Activar la cuenta y limpiar el token
         $user->is_active = true;
         $user->activation_token = null;
         $user->role_id = 2;
         $user->save();
-    
+
         return response()->json(['message' => 'La cuenta ha sido activada.'], 200);
     }
-    
+    public function activateAccount2(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'activation_code' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return view('errors.activation', [
+                'message' => 'Los datos proporcionados son inválidos.',
+                'errors' => $validator->errors()
+            ]);
+        }
+
+        // Buscar al usuario por el código de activación
+        $user = User::where('activation_token', $request->activation_code)->first();
+
+        if (!$user) {
+            return view('errors.activation', [
+                'message' => 'El código de activación es incorrecto.'
+            ]);
+        }
+
+        if ($user->is_active) {
+            return view('errors.activation', [
+                'message' => 'La cuenta ya está activada.'
+            ]);
+        }
+
+        // Activar la cuenta y limpiar el token
+        $user->is_active = true;
+        $user->activation_token = null;
+        $user->role_id = 2;
+        $user->save();
+
+        return view('success.activation', [
+            'message' => 'La cuenta ha sido activada correctamente.'
+        ]);
+    }
 }
