@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\Juego;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\SSEController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +42,7 @@ Route::middleware(['auth:sanctum', 'checkadmin',])->group(function () {
     Route::get('/v1/gamesview', [juego::class, 'listGames']);
     Route::get('/v1/gamesview/{id}', [juego::class, 'showGame'])
         ->where('id', '[0-9]+');
-        
+
     Route::get('/v1/logs', [LogController::class, 'obtenerLogs']);
     Route::get('/v1/logs2', [LogController::class, 'obtenerLogs2']);
     Route::get('/v1/logs/{id}', [LogController::class, 'show'])
@@ -95,6 +96,8 @@ Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])
         ->where('id', '[0-9]+');
     Route::post('/v1/partidosjuego', [Juego::class, 'partidosjuego']);
 });
+Route::get('/v1/lectores2/sse', [LibroController::class, 'streamLectoresWithPage']);
+
 //Tablas
 Route::middleware(['auth:sanctum'])->group(function () {
     // Mostrar todos
@@ -103,6 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Mostrar todos los lectores
     Route::get('/v1/lectores', [LibroController::class, 'indexLectores'])->middleware('checkrole');
     Route::get('/v1/lectores2', [LibroController::class, 'indexLectores2'])->middleware('checkrole');
+
     // Mostrar todos lal librerías
     Route::get('/v1/librerías', [LibroController::class, 'indexLibrerías'])->middleware('checkrole');
     Route::get('/v1/librerías2', [LibroController::class, 'indexLibrerías2'])->middleware('checkrole');

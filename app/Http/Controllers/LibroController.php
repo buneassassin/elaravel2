@@ -16,6 +16,8 @@ use App\Models\Resena;
 use App\Models\Inventario;
 use App\Models\Token;
 
+use App\Events\Resenas;
+
 //Validaciones
 use Illuminate\Support\Facades\Validator;
 use Database\Seeders\DatabaseSeeder;
@@ -414,6 +416,54 @@ class LibroController extends Controller
 
         ]);
     }
+    public function streamLectores()
+    {
+        return response()->stream(function () {
+            // Bucle infinito para emitir continuamente datos SSE.
+            while (true) {
+                $Lectores = Lector::paginate(10);
+                $data = json_encode([
+                    'success'    => true,
+                    'message'    => 'Lista de lectores paginada',
+                    'data'       => $Lectores->items(),
+                    'pagination' => [
+                        'current_page' => $Lectores->currentPage(),
+                        'total'        => $Lectores->total(),
+                        'per_page'     => $Lectores->perPage(),
+                        'last_page'    => $Lectores->lastPage(),
+                    ],
+                ]);
+                $Lectores = Lector::paginate(10);
+                $data = json_encode([
+                    'success' => true,
+                    'message' => 'Lista de lectores paginada',
+                    'data' => $Lectores->items(),
+                    'pagination' => [
+                        'current_page' => $Lectores->currentPage(),
+                        'total' => $Lectores->total(),
+                        'per_page' => $Lectores->perPage(),
+                        'last_page' => $Lectores->lastPage(),
+                    ],
+
+                ]);
+                // Emite el evento SSE (recordar doble salto de línea)
+                echo "data: {$data}\n\n";
+
+                // Envía la salida al cliente
+                @ob_flush();
+                flush();
+
+                // Espera 10 segundos antes de enviar la siguiente actualización.
+                sleep(20);
+            }
+        }, 200, [
+            'Content-Type'  => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection'    => 'keep-alive',
+        ]);
+    }
+
+
     public function storeLectores(Request $request)
     {
         // Crear el Lector
@@ -474,29 +524,41 @@ class LibroController extends Controller
             ]
         ]);
     }
-    public function storeLibrerías(Request $request)
+    public function streamLectoresWithPage(Request $request)
     {
-        //validar los datos
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'ubicacion' => 'required|string|max:255',
-        ]);
+        // Obtén el número de página de la URL, por defecto 1 si no se envía
+        $page = $request->get('page', 1);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-        $Libreria = Libreria::create([
-            'nombre' => $request->input('nombre'),
-            'ubicacion' => $request->input('ubicacion'),
-        ]);
-        return response()->json([
-            'Libreria' => $Libreria,
+        return response()->stream(function () use ($page) {
+            while (true) {
+                // Realiza la paginación utilizando el parámetro recibido
+                $lectores = Lector::paginate(10, ['*'], 'page', $page);
+
+                $data = json_encode([
+                    'success'    => true,
+                    'message'    => 'Lista de lectores paginada',
+                    'data'       => $lectores->items(),
+                    'pagination' => [
+                        'current_page' => $lectores->currentPage(),
+                        'total'        => $lectores->total(),
+                        'per_page'     => $lectores->perPage(),
+                        'last_page'    => $lectores->lastPage(),
+                    ],
+                ]);
+
+                echo "data: {$data}\n\n";
+                @ob_flush();
+                flush();
+                // Envía la actualización cada 10 segundos (ajusta según tus necesidades)
+                sleep(20);
+            }
+        }, 200, [
+            'Content-Type'  => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection'    => 'keep-alive',
         ]);
     }
+
     public function showLibrerías($id)
     {
         $Libreria = Libreria::find($id);
@@ -797,7 +859,7 @@ class LibroController extends Controller
     }
     public function storeResena(Request $request)
     {
-        //validaciones
+        // Validaciones
         $validator = Validator::make($request->all(), [
             'calificacion' => 'required|integer|min:1|max:5',
             'comentario' => 'required|string|max:255',
@@ -809,17 +871,19 @@ class LibroController extends Controller
             ], 422);
         }
 
-
         $resena = Resena::create([
-            'lector_id' => 2,
-            'libro_id' => 8,
+            'lector_id' => 2, // O la lógica que corresponda
+            'libro_id' => 8,  // O la lógica que corresponda
             'calificacion' => $request->input('calificacion'),
             'comentario' => $request->input('comentario'),
         ]);
-
+        // Dispara el evento para enviar la reseña a los clientes conectados
+        $webSocketServer=broadcast(new Resenas($resena));
 
         return response()->json([
             'resena' => $resena,
+            'message' => 'Resena creada exitosamente',
+            'webSocketServer' => $webSocketServer
         ]);
     }
     public function showResena($id)
