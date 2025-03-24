@@ -57,9 +57,12 @@ Route::post('/v1/activate', [AuthController::class, 'activateAccount2'])->name('
 
 Route::post('/v1/register', [AuthController::class, 'register_sanctum'])->name('register');
 Route::post('/v1/login', [AuthController::class, 'login_sanctum'])->name('login')->middleware(['checkinactive']);
-Route::get('/v1/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+Route::get('/v1/me', [AuthController::class, 'me'])->middleware(['auth:sanctum','checkinactive']);
 Route::post('/v1/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+Route::post('/v1/reset-password', [AuthController::class, 'recuperarPassword'])->middleware('checkinactive');
+Route::get('reset-password/{user}', [AuthController::class, 'showResetForm'])->name('reset-password');
+Route::post('reset-passwords/{user}', [AuthController::class, 'resetPassworddd'])->name('reset-passwords');
 
 Route::post('/v1/picture', [ImageController::class, 'subirImagen'])->middleware('auth:sanctum');
 Route::get('/v1/picture', [ImageController::class, 'obtenerImagen'])->middleware('auth:sanctum');
@@ -78,7 +81,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/email', [EmailController::class, 'archivo']);
 });
 //juego
-Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
+Route::middleware(['auth:sanctum','checkinactive'])->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
 
     Route::post('/v1/game', [Juego::class, 'game']);
@@ -99,7 +102,7 @@ Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])
 Route::get('/v1/lectores2/sse', [LibroController::class, 'streamLectoresWithPage']);
 
 //Tablas
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {
     // Mostrar todos
     Route::get('/v1/libros', [LibroController::class, 'index'])->middleware('checkrole');
     Route::get('/v1/libros2', [LibroController::class, 'index2'])->middleware('checkrole');
@@ -116,6 +119,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Mostrar todos los resenias
     Route::get('/v1/resenas', [LibroController::class, 'indexResena'])->middleware('checkrole');
     Route::get('/v1/resenas2', [LibroController::class, 'indexResenas2'])->middleware('checkrole');
+    // Mostrar todos las categorias
+    Route::get('/v1/categorias', [LibroController::class, 'indexCategorias'])->middleware('checkrole');
+    Route::get('/v1/categorias2', [LibroController::class, 'indexCategorias2'])->middleware('checkrole');
 
 
     Route::middleware(['checkadmin'])->group(function () {
@@ -230,5 +236,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Eliminar
         Route::delete('/v1/resenas/{resena}', [LibroController::class, 'destroyResena'])->middleware('checkrole');
         ///////////////////////////////////////////////////////////////////////////
+        // Mostrar todos las categorias
+        //Route::get('/v1/categorias', [LibroController::class, 'indexCategorias']);
+        // Crear
+        Route::post('/v1/categorias', [LibroController::class, 'storeCategorias'])->middleware('checkrole');
+        // Uno en especifico
+        Route::get('/v1/categorias/{categoria}', [LibroController::class, 'showCategorias']);
+        // Actualizar
+        Route::put('/v1/categorias/{categoria}', [LibroController::class, 'updateCategorias'])->middleware('checkrole');
+        // Eliminar
+        Route::delete('/v1/categorias/{categoria}', [LibroController::class, 'destroyCategorias'])->middleware('checkrole');
     });
 });

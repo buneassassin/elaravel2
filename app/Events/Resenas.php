@@ -28,7 +28,7 @@ class Resenas implements ShouldBroadcast
 
     public function broadcastAs()
     {
-        return '.ResenasCreated';
+        return 'ResenasCreated';
     }
 
 

@@ -14,6 +14,7 @@ use App\Models\Prestamo;
 use App\Models\Publicacion;
 use App\Models\Resena;
 use App\Models\Inventario;
+use App\Models\Categoria;
 use App\Models\Token;
 
 use App\Events\Resenas;
@@ -27,10 +28,10 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Http;
 use Faker\Factory;
 use Faker\Factory as Faker;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LibroController extends Controller
 {
-    // Mostrar una lista de libros
     public function index()
     {
         //vereficar si hay libros
@@ -87,8 +88,6 @@ class LibroController extends Controller
             ]
         ]);
     }
-
-    // Almacenar un nuevo libro 
     public function store(Request $request)
     {
         // Verificar la validación de los datos
@@ -136,7 +135,6 @@ class LibroController extends Controller
             'autor' => $autor,
         ]);
     }
-    // Mostrar un libro específico
     public function show($id)
     {
         // Buscar el libro por su ID y cargar las relaciones
@@ -162,7 +160,6 @@ class LibroController extends Controller
             'data' => $libro,
         ]);
     }
-    // Actualizar un libro 
     public function update(Request $request, $id)
     {
         // Buscar el libro por ID
@@ -203,8 +200,6 @@ class LibroController extends Controller
             'libro' => $libro,
         ], 200);
     }
-
-    // Eliminar un libro de la base de datos
     public function destroy($id)
     {
         // Cargar el libro con las relaciones necesarias
@@ -241,7 +236,6 @@ class LibroController extends Controller
             ], 500);
         }
     }
-
     ///////////////////////////////////////////////////////////////////////////
     public function indexAutor()
     {
@@ -419,7 +413,6 @@ class LibroController extends Controller
     public function streamLectores()
     {
         return response()->stream(function () {
-            // Bucle infinito para emitir continuamente datos SSE.
             while (true) {
                 $Lectores = Lector::paginate(10);
                 $data = json_encode([
@@ -446,14 +439,9 @@ class LibroController extends Controller
                     ],
 
                 ]);
-                // Emite el evento SSE (recordar doble salto de línea)
                 echo "data: {$data}\n\n";
-
-                // Envía la salida al cliente
                 @ob_flush();
                 flush();
-
-                // Espera 10 segundos antes de enviar la siguiente actualización.
                 sleep(20);
             }
         }, 200, [
@@ -462,8 +450,6 @@ class LibroController extends Controller
             'Connection'    => 'keep-alive',
         ]);
     }
-
-
     public function storeLectores(Request $request)
     {
         // Crear el Lector
@@ -524,14 +510,72 @@ class LibroController extends Controller
             ]
         ]);
     }
+    public function streamLectoresWithPage2(Request $request)
+    {
+        //set_time_limit(0);
+
+        return response()->stream(function () {
+            
+            while (true) {  // Verifica si el cliente se desconectó
+                $mesaje = "Conexión a SSE|";
+                $data = json_encode([
+                    'message' => $mesaje
+                ]);
+                echo "data: {$data}\n\n";
+                @ob_flush();
+                flush();
+                sleep(10);
+            }
+        }, 200, [
+            'Content-Type'  => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection'    => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+
+        ]);
+    }
     public function streamLectoresWithPage(Request $request)
     {
-        // Obtén el número de página de la URL, por defecto 1 si no se envía
+        //set_time_limit(0);
         $page = $request->get('page', 1);
 
         return response()->stream(function () use ($page) {
+        
             while (true) {
-                // Realiza la paginación utilizando el parámetro recibido
+                $lectores = Lector::paginate(10, ['*'], 'page', $page);
+
+                $data = json_encode([
+                    'success'    => true,
+                    'message'    => 'Lista de lectores paginada',
+                    'data'       => $lectores->items(),
+                    'pagination' => [
+                        'current_page' => $lectores->currentPage(),
+                        'total'        => $lectores->total(),
+                        'per_page'     => $lectores->perPage(),
+                        'last_page'    => $lectores->lastPage(),
+                    ],
+                ]);
+                
+
+                echo "data: {$data}\n\n";
+                @ob_flush();
+                flush();
+                sleep(10);
+            }
+        }, 200, [
+            'Content-Type'  => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection'    => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+
+        ]);
+    }
+    public function streamLectoresWithPage1(Request $request)
+    {
+        $page = $request->get('page', 1);
+
+        $response = new StreamedResponse(function () use ($page) {
+            while (true) {
                 $lectores = Lector::paginate(10, ['*'], 'page', $page);
 
                 $data = json_encode([
@@ -549,16 +593,28 @@ class LibroController extends Controller
                 echo "data: {$data}\n\n";
                 @ob_flush();
                 flush();
-                // Envía la actualización cada 10 segundos (ajusta según tus necesidades)
-                sleep(20);
+                sleep(10);
             }
-        }, 200, [
-            'Content-Type'  => 'text/event-stream',
-            'Cache-Control' => 'no-cache',
-            'Connection'    => 'keep-alive',
+        });
+
+        $response->headers->set('Content-Type', 'text/event-stream');
+        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('Connection', 'keep-alive');
+
+        return $response;
+    }
+    public function storeLibrerías(Request $request)
+    {
+        // Crear la Libreria
+        $Libreria = Libreria::create([
+            'nombre' => $request->input('nombre'),
+            'ubicacion' => $request->input('ubicacion'),
+        ]);
+
+        return response()->json([
+            'Libreria' => $Libreria,
         ]);
     }
-
     public function showLibrerías($id)
     {
         $Libreria = Libreria::find($id);
@@ -872,19 +928,19 @@ class LibroController extends Controller
         }
 
         $resena = Resena::create([
-            'lector_id' => 2, // O la lógica que corresponda
-            'libro_id' => 8,  // O la lógica que corresponda
+            'lector_id' => 2, // Cambia según tu lógica
+            'libro_id' => 8,  // Cambia según tu lógica
             'calificacion' => $request->input('calificacion'),
             'comentario' => $request->input('comentario'),
         ]);
-        // Dispara el evento para enviar la reseña a los clientes conectados
-        $webSocketServer=broadcast(new Resenas($resena));
+
+        // Emite la reseña completa para que el front pueda actualizar la lista
+        broadcast(new Resenas($resena));
 
         return response()->json([
             'resena' => $resena,
             'message' => 'Resena creada exitosamente',
-            'webSocketServer' => $webSocketServer
-        ]);
+        ], 200);
     }
     public function showResena($id)
     {
@@ -922,6 +978,59 @@ class LibroController extends Controller
             'message' => 'Resena eliminado exitosamente',
         ], 200);
     }
-    ///////////////////////////////////////////////////////////////////////////////
-
+    //////////////////////////////////////////////////////////////////////////////
+    public function indexCategorias()
+    {
+        $categorias = Categoria::all();
+        return response()->json([
+            'categorias' => $categorias,
+        ]);
+    }
+    public function indexCategorias2()
+    {
+        $categorias = Categoria::with([])->paginate(10);
+        return response()->json([
+            'success' => true,
+            'categorias' => $categorias->items(),
+            'pagination' => [
+                'current_page' => $categorias->currentPage(),
+                'total' => $categorias->total(),
+                'per_page' => $categorias->perPage(),
+                'last_page' => $categorias->lastPage(),
+            ],
+        ]);
+    }
+    public function storeCategorias(Request $request)
+    {
+        $categoria = Categoria::create([
+            'nombre' => $request->input('nombre'),
+        ]);
+        return response()->json([
+            'categoria' => $categoria,
+            'message' => 'Categoria creada exitosamente',
+        ], 200);
+    }
+    public function showCategorias($id)
+    {
+        $categoria = Categoria::find($id);
+        return response()->json([
+            'categoria' => $categoria,
+        ]);
+    }
+    public function updateCategorias(Request $request, Categoria $categoria)
+    {
+        $categoria->update([
+            'nombre' => $request->input('nombre'),
+        ]);
+        return response()->json([
+            'categoria' => $categoria,
+        ]);
+    }
+    public function destroyCategorias($id)
+    {
+        Categoria::destroy($id);
+        return response()->json([
+            'message' => 'Categoria eliminado exitosamente',
+        ], 200);
+    }
 }

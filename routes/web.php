@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\LibroController;
+use App\Http\Controllers\SSEController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,5 +24,4 @@ Route::get('/', function () {
 // routes/web.php
 
 Route::get('/activate', [AuthController::class, 'showActivationForm'])->name('user.activate.form');
-
 

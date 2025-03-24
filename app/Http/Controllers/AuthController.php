@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Mail\AccountActivationMail;
 use App\Mail\AdminNotificationMail;
 use Illuminate\Support\Facades\Validator;
+use App\Mail\ResetPassword;
 
 class AuthController extends Controller
 {
@@ -72,7 +73,7 @@ class AuthController extends Controller
         }
 
         if (!$user->is_active) {
-            return response()->json(['error' => 'Cuenta no activada. Por favor, revisa tu correo para activarla.'], 403);
+            return response()->json(['error' => 'Cuenta no activada. Por favor, revisa tu correo para activarla.'], 401);
         }
 
         $token = $user->createToken("Mi_dispositivo")->plainTextToken;
@@ -177,37 +178,84 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'activation_code' => 'required|string',
         ]);
-
+    
         if ($validator->fails()) {
             return view('errors.activation', [
                 'message' => 'Los datos proporcionados son inválidos.',
                 'errors' => $validator->errors()
             ]);
         }
-
+    
         // Buscar al usuario por el código de activación
         $user = User::where('activation_token', $request->activation_code)->first();
-
+    
         if (!$user) {
             return view('errors.activation', [
                 'message' => 'El código de activación es incorrecto.'
             ]);
         }
-
+    
         if ($user->is_active) {
             return view('errors.activation', [
                 'message' => 'La cuenta ya está activada.'
             ]);
         }
-
+    
         // Activar la cuenta y limpiar el token
         $user->is_active = true;
         $user->activation_token = null;
         $user->role_id = 2;
         $user->save();
-
+    
+        // Aquí enviamos un mensaje de éxito y mostramos un botón para ir al login
         return view('success.activation', [
             'message' => 'La cuenta ha sido activada correctamente.'
         ]);
+    }
+    public function recuperarPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()
+            ], 400);
+        }
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Email not found'
+            ], 404);
+        }
+        $url = URL::temporarySignedRoute('reset-password', now(), ['user' => $user->id]);
+        $activarCuenta = new ResetPassword($user, $url);
+
+        Mail::to($user->email)->send($activarCuenta);
+
+        return response()->json([
+            'message' => 'Correo enviado correctamente, revisa tu correo',
+            'email' => $user->email,
+            'url' => $url
+        ], 200);
+    }
+    public function showResetForm($userId)
+    {
+        // Verifica si el enlace es válido
+        $user = User::findOrFail($userId);
+        return view('auth.reset_password_form', ['user' => $user]);
+    }
+    public function resetPassworddd(Request $request, $userId)
+    {
+
+        $user = User::findOrFail($userId);
+        $user->password = bcrypt($request->password);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña cambiada correctamente',
+        ], 200);
     }
 }

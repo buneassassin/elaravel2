@@ -14,6 +14,7 @@ use App\Models\Resena;
 use App\Models\Lector;
 use App\Models\Prestamo;
 use App\Models\Libro;
+use App\Models\Categoria;
 use App\Models\Role;
 
 
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
         EventoLiterario::factory(5)->create();
         Inventario::factory(5)->create();
         ParticipacionEvento::factory(5)->create();
+        Categoria::factory(15)->create();
 
 
 
