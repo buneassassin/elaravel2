@@ -53,7 +53,48 @@ class AdminController extends Controller
             'roles' => ['guest', 'user', 'admin'],
         ], 200);
     }
+    public function cambiarRol(Request $request){
+        $validator = Validator::make($request->all(), [
+            'rol' => 'required|string',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Los datos proporcionados son inválidos.',
+            ], 422);
+        }
+        //por si nos mada id de ves de correo
+        if ($request->id){
+            $user = User::where('id', $request->id)->first();
+        }else if ($request->email){
+            $user = User::where('email', $request->email)->first();
+        }else{
+            return response()->json(['message' => 'Proporciona el correo o el id.'], 404);
+        }
+
+        if (!$user) {
+            return response()->json(['message' => 'El usuario no existe.'], 404);
+        }
+        if ($user->role_id == 3) {
+            return response()->json(['message' => 'El usuario es admin.'], 400);
+        }
+        $user->role_id = $request->rol;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Rol actualizado.',
+        ]);
+    }
+    public function showUser($id){
+        $user = User::where('id', $id)->first();
+        if (!$user) {
+            return response()->json(['message' => 'El usuario no existe.'], 404);
+        }
+        return response()->json([
+            'message' => 'Usuario obtenido correctamente.',
+            'user' => $user
+        ]);
+    }
     public function activateUser(Request $request)
     {
 

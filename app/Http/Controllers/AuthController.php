@@ -248,14 +248,11 @@ class AuthController extends Controller
     }
     public function resetPassworddd(Request $request, $userId)
     {
-
         $user = User::findOrFail($userId);
         $user->password = bcrypt($request->password);
         $user->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Contraseña cambiada correctamente',
-        ], 200);
+    
+        return redirect()->back()->with('success', '¡Contraseña cambiada correctamente!');
     }
+    
 }

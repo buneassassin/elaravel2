@@ -33,6 +33,8 @@ Route::middleware(['auth:sanctum', 'checkadmin',])->group(function () {
     Route::get('/v1/isAdmin', [AdminController::class, 'isAdmin']);
     Route::get('/v1/users', [AdminController::class, 'isUserGeneral']);
     Route::get('/v1/obtenerRol', [AdminController::class, 'obtenerRol']);
+    Route::post('/v1/cambiarRol', [AdminController::class, 'cambiarRol']);
+    Route::get('/v1/users/{id}', [AdminController::class, 'showUser']);
     Route::post('/v1/activate', [AdminController::class, 'activateUser']);
     Route::get('/v1/admin', [AdminController::class, 'index']);
     Route::put('/v1/admin', [AdminController::class, 'update']);

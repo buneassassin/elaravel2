@@ -111,7 +111,14 @@
             <label for="password_confirmation">Confirmar Nueva Contraseña:</label>
             <input type="password" name="password_confirmation" id="password_confirmation" required>
             <div class="error" id="error-message">Las contraseñas no coinciden.</div>
+            @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+            @endif
+
             <button type="submit">Restablecer Contraseña</button>
+            <a href="http://192.168.113.183:4200/login" class="btn btn-primary">Ir al Login</a>
         </form>
     </div>
 
