@@ -12,6 +12,19 @@
                     <label for="activation_code" class="form-label">Código de Activación</label>
                     <input type="text" name="activation_code" id="activation_code" class="form-control" placeholder="Ingresa tu código" required>
                 </div>
+
+                @if(session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+                @endif
+
+            @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+            @endif
+
                 <div class="d-grid">
                     <button type="submit" class="btn btn-success">Activar Cuenta</button>
                 </div>

@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.7",
         "league/flysystem-aws-s3-v3": "3.0",
         "mongodb/laravel-mongodb": "^3.9",
+        "predis/predis": "^2.3",
         "pusher/pusher-php-server": "^7.2"
     },
     "require-dev": {

@@ -79,6 +79,20 @@ class AdminController extends Controller
             return response()->json(['message' => 'El usuario es admin.'], 400);
         }
         $user->role_id = $request->rol;
+        if ($user->role_id == 1) {
+            $user->is_active = false;
+            $activationCode = rand(100000, 999999);
+
+            $user->activation_token = $activationCode;
+        }
+        if ($user->role_id == 2) {
+            $user->is_active = true;
+            $user->activation_token = null;
+        }
+        if($user->role_id == 3) {
+            $user->is_active = true;
+            $user->activation_token = null;
+        }
         $user->save();
 
         return response()->json([

@@ -29,7 +29,7 @@ class CheckActive
                 $email = Auth::user()->email;
             } else {
                 // Si no está autenticado, devolvemos un error indicando que no se proporcionaron datos de usuario
-                return response()->json(['message' => 'Datos de usuario no proporcionados.'], 401);
+                return response()->json(['message' => 'Datos de usuario no validos.'], 401);
             }
         }
     
@@ -38,7 +38,7 @@ class CheckActive
     
         // Si el usuario no existe, devolvemos un mensaje indicando que los datos del usuario no son válidos
         if ($user == null) {
-            return response()->json(['message' => 'Datos de usuario no proporcionados.'], 404);
+            return response()->json(['message' => 'Datos de usuario no validos.'], 404);
         }
     
         // Verificamos si el usuario está activo

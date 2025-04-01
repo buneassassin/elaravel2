@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum','checkinactive'])->group(function () {
     Route::post('/v1/partidosjuego', [Juego::class, 'partidosjuego']);
 });
 Route::get('/v1/lectores2/sse', [LibroController::class, 'streamLectoresWithPage']);
+Route::get('/v1/lectores2/ssee', [LibroController::class, 'streamLectores']);
 
 //Tablas
 Route::middleware(['auth:sanctum', 'checkrole', 'checkactive', 'checkinactive'])->group(function () {

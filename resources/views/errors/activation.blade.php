@@ -5,11 +5,13 @@
 </head>
 <body>
     <h1>{{ $message }}</h1>
+    <button onclick="history.back()">Volver</button>
     @if(isset($errors))
         <ul>
             @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
+}            
         </ul>
     @endif
 </body>

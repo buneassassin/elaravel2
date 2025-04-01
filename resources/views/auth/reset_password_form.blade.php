@@ -118,7 +118,7 @@
             @endif
 
             <button type="submit">Restablecer Contraseña</button>
-            <a href="http://192.168.113.183:4200/login" class="btn btn-primary">Ir al Login</a>
+            <a href="http://192.168.119.213:4200//login" class="btn btn-primary">Ir al Login</a>
         </form>
     </div>
 

@@ -25,6 +25,7 @@ class RoleSeeder extends Seeder
             'name' => 'Admin',
             'email' => 'K6p6M@example.com',
             'password' => bcrypt('123456789'),
+            'profile_picture' => 'https://ui-avatars.com/api/?name=Admin&color=7F9CF5&background=EBF4FF',
             'role_id' => 3,
             'is_active' => true,
         ]);

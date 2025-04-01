@@ -18,6 +18,7 @@ use App\Models\Categoria;
 use App\Models\Token;
 
 use App\Events\Resenas;
+use App\Events\LectorCreated;
 
 //Validaciones
 use Illuminate\Support\Facades\Validator;
@@ -450,12 +451,28 @@ class LibroController extends Controller
             'Connection'    => 'keep-alive',
         ]);
     }
-    public function storeLectores(Request $request)
+    public function storeLectores(Request $request) 
     {
         // Crear el Lector
         $Lector = Lector::create([
             'nombre' => $request->input('nombre'),
-            'email' => $request->input('email'),
+            'email' => $request->input('emails'),
+        ]);
+
+        // Emitir el evento
+        event(new LectorCreated("Lector creado "));
+
+        return response()->json([
+            'Lector' => $Lector,
+        ]);
+    }
+
+    public function storeLectores22(Request $request)
+    {
+        // Crear el Lector
+        $Lector = Lector::create([
+            'nombre' => $request->input('nombre'),
+            'email' => $request->input('emails'),
         ]);
 
         return response()->json([
@@ -475,6 +492,8 @@ class LibroController extends Controller
             'email' => $request->input('email'),
             'nombre' => $request->input('nombre'),
         ]);
+        event(new LectorCreated("Lector actualizado"));
+
         return response()->json([
             'lector' => $lector,
         ]);
@@ -482,6 +501,8 @@ class LibroController extends Controller
     public function destroyLectores($id)
     {
         Lector::destroy($id);
+        event(new LectorCreated("Lector eliminado"));
+
         return response()->json([
             'message' => 'Lector eliminado exitosamente',
         ], 200);
@@ -967,6 +988,8 @@ class LibroController extends Controller
             'comentario' => $request->input('comentario'),
 
         ]);
+        broadcast(new Resenas($resena));
+
         return response()->json([
             'resena' => $resena,
         ]);
@@ -974,6 +997,7 @@ class LibroController extends Controller
     public function destroyResena($id)
     {
         Resena::destroy($id);
+        broadcast(new Resenas($resena));
         return response()->json([
             'message' => 'Resena eliminado exitosamente',
         ], 200);

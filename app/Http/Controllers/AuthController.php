@@ -63,13 +63,13 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Los datos proporcionados son inválidos.'], 422);
+            return response()->json(['message' => 'Los datos proporcionados son válidos.'], 422);
         }
 
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['error' => 'Credenciales inválidas'], 401);
+            return response()->json(['error' => 'Los datos proporcionados son válidos.'], 401);
         }
 
         if (!$user->is_active) {
@@ -132,7 +132,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'La cuenta ya está activada.'], 400);
         }
 
-        $activationLink = URL::temporarySignedRoute('user.activate', now()->addMinutes(5), ['user' => $user->id]);
+        $activationLink = URL::temporarySignedRoute('user.activate.form', now()->addMinutes(10), ['user' => $user->id]);
         Mail::to($request->email)->send(new AccountActivationMail($activationLink, $user->activation_token));
 
         return response()->json(['message' => 'Se ha enviado un nuevo enlace de activación a tu correo electrónico.'], 200);
